@@ -1,0 +1,7 @@
+{
+  "name": "git-commands",
+  "description": "Git workflow commands for watching PR CI checks, fixing failures, and merging PRs",
+  "author": {
+    "name": "charliek"
+  }
+}

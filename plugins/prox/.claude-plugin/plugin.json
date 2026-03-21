@@ -1,0 +1,7 @@
+{
+  "name": "prox",
+  "description": "Guidance for working with the prox process manager — configuration, CLI, proxy setup, and troubleshooting",
+  "author": {
+    "name": "charliek"
+  }
+}
