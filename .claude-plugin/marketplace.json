@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "claude-plugins",
-  "description": "Shared Claude Code plugins: git workflow commands, prox process manager, and more",
+  "name": "cc-plugins",
+  "description": "Shared plugins: git workflow commands, prox process manager, and more",
   "owner": {
     "name": "charliek"
   },

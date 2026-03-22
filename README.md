@@ -1,4 +1,4 @@
-# claude-plugins
+# cc-plugins
 
 Shared Claude Code plugins for development workflows.
 
@@ -11,13 +11,10 @@ Shared Claude Code plugins for development workflows.
 
 ## Installation
 
-```bash
-# Add as a marketplace
-claude plugins marketplace add github:<owner>/claude-plugins
-
-# Install individual plugins
-claude plugins install git-commands
-claude plugins install prox
+```
+/plugin marketplace add charliek/cc-plugins
+/plugin install git-commands@cc-plugins
+/plugin install prox@cc-plugins
 ```
 
 ## Adding new plugins
