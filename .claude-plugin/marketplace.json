@@ -17,6 +17,18 @@
       "description": "Guidance for working with the prox process manager — configuration, CLI, proxy setup, and troubleshooting",
       "source": "./plugins/prox",
       "category": "development"
+    },
+    {
+      "name": "release",
+      "description": "Software release commands for creating semver-tagged releases with changelog generation and GoReleaser",
+      "source": "./plugins/release",
+      "category": "development"
+    },
+    {
+      "name": "deploy",
+      "description": "Deploy commands for creating date-based releases that trigger Docker image builds and site deployments",
+      "source": "./plugins/deploy",
+      "category": "development"
     }
   ]
 }

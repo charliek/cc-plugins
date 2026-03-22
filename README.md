@@ -8,6 +8,8 @@ Shared Claude Code plugins for development workflows.
 |--------|------|-------------|
 | [git-commands](plugins/git-commands/) | Commands | `/watch-pr` and `/merge-pr` for PR CI monitoring and merging |
 | [prox](plugins/prox/) | Skill | Guidance for the prox process manager — process management, logs, proxy routing |
+| [release](plugins/release/) | Commands | `/release:release` for semver software releases with GoReleaser |
+| [deploy](plugins/deploy/) | Commands | `/deploy:build` for date-based releases that trigger Docker builds |
 
 ## Installation
 
@@ -15,6 +17,8 @@ Shared Claude Code plugins for development workflows.
 /plugin marketplace add charliek/cc-plugins
 /plugin install git-commands@cc-plugins
 /plugin install prox@cc-plugins
+/plugin install release@cc-plugins
+/plugin install deploy@cc-plugins
 ```
 
 ## Adding new plugins

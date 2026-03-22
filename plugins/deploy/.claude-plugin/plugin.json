@@ -1,0 +1,7 @@
+{
+  "name": "deploy",
+  "description": "Deploy commands for creating date-based releases that trigger Docker image builds and site deployments",
+  "author": {
+    "name": "charliek"
+  }
+}

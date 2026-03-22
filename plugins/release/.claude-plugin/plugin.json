@@ -1,0 +1,7 @@
+{
+  "name": "release",
+  "description": "Software release commands for creating semver-tagged releases with changelog generation and GoReleaser",
+  "author": {
+    "name": "charliek"
+  }
+}
