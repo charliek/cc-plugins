@@ -10,7 +10,7 @@ Shared Claude Code plugins for development workflows.
 | [prox](plugins/prox/) | Skill | Guidance for the prox process manager — process management, logs, proxy routing |
 | [release](plugins/release/) | Commands | `/release:release` for semver software releases with GoReleaser |
 | [deploy](plugins/deploy/) | Commands | `/deploy:build` for date-based releases that trigger Docker builds |
-| [planning](plugins/planning/) | Commands | `/planning:ask-codex`, `/planning:ask-kimi`, `/planning:ask-panel` for AI-powered plan review |
+| [planning](plugins/planning/) | Commands | `/planning:ask-codex`, `/planning:ask-kimi`, `/planning:ask-coderabbit`, `/planning:ask-panel` for AI-powered plan review |
 
 ## Installation
 

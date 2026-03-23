@@ -32,7 +32,7 @@
     },
     {
       "name": "planning",
-      "description": "Commands for submitting implementation plans to Codex CLI and Kimi K2.5 for AI review and autonomous feedback incorporation",
+      "description": "Commands for submitting implementation plans to Codex, Kimi K2.5, and CodeRabbit for AI review and autonomous feedback incorporation",
       "source": "./plugins/planning",
       "category": "development"
     }
