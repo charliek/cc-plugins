@@ -83,15 +83,15 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, check fo
    - Read the CodeRabbit agent's returned result
    - If any tool failed, proceed with the others' findings
 
-6. **Synthesize feedback**: Cross-reference findings from all reviewers
-   - **Consensus findings**: Multiple reviewers flag the same concern — highest priority, address first
-   - **Unique findings**: Only one reviewer flagged the concern — evaluate individually (fix real improvements, skip nitpicks)
-   - **Contradictions**: Reviewers disagree on the same topic — flag for user review, do not act autonomously
+6. **Synthesize feedback**: Compile a unified list of all findings from all reviewers. Every finding should be evaluated on its own merit regardless of which reviewer raised it.
+   - **Prioritization**: Findings flagged by multiple reviewers are likely higher priority, but a finding from a single reviewer is still valid and should be evaluated
+   - **Reviewer strength**: Codex tends to be the strongest reviewer. Give its unique findings strong consideration. Kimi and CodeRabbit may catch things Codex misses but weigh their findings accordingly.
+   - **Contradictions**: When reviewers disagree on the same topic, flag for user review rather than acting autonomously
+   - Do not discard findings just because only one reviewer raised them
 
 7. **Incorporate feedback**: Apply improvements to the plan file
-   - Address consensus findings first
-   - Address unique findings that meet the "real improvement" bar
-   - Skip nitpicks and style-only suggestions
+   - Evaluate every finding on its own merit — does it make the plan better?
+   - Skip only genuine nitpicks and style-only suggestions
 
 8. **Re-review**: If edits were made, automatically run one more pass
    - **Circuit breaker**: Maximum 2 total passes. After the second, stop and report regardless.
@@ -99,8 +99,8 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, check fo
 
 9. **Report results**: Summarize the full outcome (including refinements from step 3)
    - **Per-reviewer summary**: How many findings each reviewer returned
-   - **Consensus findings**: Issues multiple reviewers agreed on
-   - **Unique findings addressed**: Reviewer-specific issues that were fixed
+   - **Multi-reviewer findings**: Issues multiple reviewers agreed on (highest confidence)
+   - **Single-reviewer findings addressed**: Issues raised by one reviewer that were fixed
    - **Findings skipped**: What was not addressed and why
    - **Contradictions**: Any disagreements flagged for user review
    - **Tool failures**: If any tool failed or was skipped, explain why
