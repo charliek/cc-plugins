@@ -1,0 +1,7 @@
+{
+  "name": "planning",
+  "description": "Commands for submitting implementation plans to Codex, Kimi K2.5, and CodeRabbit for AI review and autonomous feedback incorporation",
+  "author": {
+    "name": "charliek"
+  }
+}

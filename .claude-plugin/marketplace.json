@@ -29,6 +29,12 @@
       "description": "Deploy commands for creating date-based releases that trigger Docker image builds and site deployments",
       "source": "./plugins/deploy",
       "category": "development"
+    },
+    {
+      "name": "planning",
+      "description": "Commands for submitting implementation plans to Codex, Kimi K2.5, and CodeRabbit for AI review and autonomous feedback incorporation",
+      "source": "./plugins/planning",
+      "category": "development"
     }
   ]
 }
