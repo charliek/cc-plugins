@@ -11,7 +11,7 @@ Run Codex, Kimi K2.5, and CodeRabbit plan reviews in parallel, synthesize their 
 - **Kimi K2.5** (Moonshot AI via Fireworks) — reviews via `opencode run`, proactively explores the repo
 - **CodeRabbit** — reviews via `coderabbit:code-reviewer` agent, reads repo files directly
 
-Use `$ARGUMENTS` as an optional path to the plan file. If not provided, check for an active plan file from conversation context.
+Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the active plan file from the current conversation context (typically in `~/.claude/plans/`).
 
 ## Steps
 
