@@ -43,6 +43,8 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 
    **Launch all reviewers concurrently** using a single message with multiple Agent tool calls, each with `run_in_background: true`. If a CLI tool was unavailable (detected in step 1), skip that agent.
 
+   **Do NOT combine multiple reviewers into a single Agent or Bash call.** Each reviewer must be its own separate Agent tool call. Combining CLI tools into one shell command causes bash operator precedence bugs that silently break variable scoping.
+
    **Codex reviewer** (if codex CLI is available):
    Use the Agent tool with `subagent_type: "general-purpose"` and `run_in_background: true`.
    Prompt the agent to run the Codex review and return only the review text:
