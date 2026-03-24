@@ -20,12 +20,15 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 
 2. **Read the plan**: Read the full plan file content so it can be included in the agent prompt.
 
-3. **Refine the plan before submission**: Update the plan to meet review-readiness criteria before sending it to CodeRabbit. This ensures the external reviewer evaluates a well-structured plan, not a rough draft.
-   - **Standalone**: Remove any dependencies on conversation context. The plan must be fully understandable on its own.
-   - **Acceptance criteria**: Ensure the plan has clear acceptance criteria that serve as explicit exit criteria. A reader should know exactly when the plan is "done."
-   - **Testing and linting**: Test updates, test coverage, and linting must be listed as exit criteria of the plan.
-   - **Repo patterns**: Ensure the plan matches the repo's architectural patterns and conventions.
-   - Edit the plan file with any needed refinements before proceeding.
+3. **Refine the plan before submission**: Read the plan and verify it meets these review-readiness criteria. Edit the plan file to fix any gaps before proceeding.
+
+   Checklist — the plan must have:
+   - [ ] **Context section**: Why this change is being made (problem, motivation, intended outcome)
+   - [ ] **File list**: Paths of all files to be created or modified
+   - [ ] **Acceptance criteria**: Explicit exit criteria — a reader knows exactly when the plan is "done"
+   - [ ] **Test plan**: What tests to add/update, what commands to run for verification
+   - [ ] **No conversation dependencies**: Fully understandable without prior chat context
+   - [ ] **Repo conventions**: Matches the repo's existing patterns (naming, structure, tooling)
 
 4. **Submit the plan to CodeRabbit for review**: Launch a `coderabbit:code-reviewer` agent with the plan content and specific review questions.
 
@@ -47,7 +50,4 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 
 6. **Incorporate feedback**: Edit the plan file with worthwhile improvements
 
-7. **Re-review**: If edits were made, automatically submit the updated plan to CodeRabbit one more time
-   - **Circuit breaker**: Maximum 2 total review passes. After the second, stop and report regardless.
-
-8. **Report results**: Summarize what was refined (step 3), what CodeRabbit found, what was incorporated, and what was skipped
+7. **Report results**: Summarize what was refined (step 3), what CodeRabbit found, what was incorporated, and what was skipped

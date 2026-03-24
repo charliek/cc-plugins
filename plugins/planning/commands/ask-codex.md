@@ -20,26 +20,33 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    - If no argument, check for an active plan file from the current conversation context
    - If no plan file can be found, ask the user to provide the path and stop
 
-3. **Refine the plan before submission**: Read the plan and update it to meet review-readiness criteria before sending it to Codex. This ensures the external reviewer evaluates a well-structured plan, not a rough draft.
-   - **Standalone**: Remove any dependencies on conversation context. The plan must be fully understandable on its own.
-   - **Acceptance criteria**: Ensure the plan has clear acceptance criteria that serve as explicit exit criteria. A reader should know exactly when the plan is "done."
-   - **Testing and linting**: Test updates, test coverage, and linting must be listed as exit criteria of the plan.
-   - **Repo patterns**: Ensure the plan matches the repo's architectural patterns and conventions.
-   - Edit the plan file with any needed refinements before proceeding.
+3. **Refine the plan before submission**: Read the plan and verify it meets these review-readiness criteria. Edit the plan file to fix any gaps before proceeding.
 
-4. **Submit the plan to Codex for review**: Pipe the plan content to Codex with review instructions prepended so Codex treats it as something to evaluate, not execute.
+   Checklist — the plan must have:
+   - [ ] **Context section**: Why this change is being made (problem, motivation, intended outcome)
+   - [ ] **File list**: Paths of all files to be created or modified
+   - [ ] **Acceptance criteria**: Explicit exit criteria — a reader knows exactly when the plan is "done"
+   - [ ] **Test plan**: What tests to add/update, what commands to run for verification
+   - [ ] **No conversation dependencies**: Fully understandable without prior chat context
+   - [ ] **Repo conventions**: Matches the repo's existing patterns (naming, structure, tooling)
+
+4. **Submit the plan to Codex for review**: Pass the plan content inline in the Codex prompt. The plan is shell-expanded into the argument string — do not pipe via stdin.
 
    Run the following as a **single Bash command** (the temp directory variable must remain in scope):
 
    ```bash
    tmpdir=$(mktemp -d) && \
    echo "TMPDIR=$tmpdir" && \
-   (echo "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? <additional-user-prompt-if-any>. Provide specific, actionable feedback organized by category."; echo ""; echo "---BEGIN PLAN---"; cat "<plan-file-path>"; echo "---END PLAN---") | codex exec - -o "$tmpdir/codex.txt" 2>"$tmpdir/stderr.txt"
+   codex exec --full-auto -o "$tmpdir/codex.txt" \
+     "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? <additional-user-prompt-if-any>. Provide specific, actionable feedback organized by category.
+
+   ---BEGIN PLAN---
+   $(cat "<plan-file-path>")
+   ---END PLAN---" \
+     2>"$tmpdir/stderr.txt"
    ```
 
-   **Important:** Always prepend review instructions before the plan content. Without them, Codex may interpret the plan as instructions to execute rather than content to review.
-
-   **Important:** The `-o` flag writes Codex's final response to the specified file. Do not rely on stdout — `codex exec` produces no stdout output for multi-step sessions.
+   **Important:** `--full-auto` lets Codex explore the repo for context. `-o` captures the final response to a file.
 
    **Note the temp directory path** from the `TMPDIR=...` output line — use it when reading output files and during cleanup.
 
@@ -51,8 +58,5 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 
 6. **Incorporate feedback**: Edit the plan file with worthwhile improvements
 
-7. **Re-review**: If edits were made, automatically submit the updated plan to Codex one more time
-   - **Circuit breaker**: Maximum 2 total review passes. After the second, stop and report regardless.
-
-8. **Report results**: Summarize what was refined (step 3), what Codex found, what was incorporated, and what was skipped
+7. **Report results**: Summarize what was refined (step 3), what Codex found, what was incorporated, and what was skipped
    - Clean up: `rm -rf "$tmpdir"` (use the actual temp directory path from step 4)
