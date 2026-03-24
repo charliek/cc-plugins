@@ -33,12 +33,15 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 
    ```bash
    tmpdir=$(mktemp -d) && \
+   echo "TMPDIR=$tmpdir" && \
    (echo "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? <additional-user-prompt-if-any>. Provide specific, actionable feedback organized by category."; echo ""; echo "---BEGIN PLAN---"; cat "<plan-file-path>"; echo "---END PLAN---") | codex exec - -o "$tmpdir/codex.txt" 2>"$tmpdir/stderr.txt"
    ```
 
    **Important:** Always prepend review instructions before the plan content. Without them, Codex may interpret the plan as instructions to execute rather than content to review.
 
    **Important:** The `-o` flag writes Codex's final response to the specified file. Do not rely on stdout — `codex exec` produces no stdout output for multi-step sessions.
+
+   **Note the temp directory path** from the `TMPDIR=...` output line — use it when reading output files and during cleanup.
 
    Check the exit code. If non-zero, read `$tmpdir/stderr.txt` for error details and stop. Otherwise read `$tmpdir/codex.txt` for the review.
 
