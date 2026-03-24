@@ -51,19 +51,21 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    >
    > Run as a single Bash command:
    > ```bash
-   > tmpdir=$(mktemp -d) && \
+   > tmpdir=$(mktemp -d)
+   > trap 'rm -rf "$tmpdir"' EXIT
    > codex exec --full-auto -o "$tmpdir/codex.txt" \
    >   "Review the following implementation plan. Evaluate standalone readability, acceptance criteria, test coverage, and repo pattern alignment. Provide specific, actionable feedback organized by category.
    >
    >   ---BEGIN PLAN---
    >   <paste full plan text here>
    >   ---END PLAN---" \
-   >   2>"$tmpdir/stderr.txt" && \
-   > cat "$tmpdir/codex.txt" && \
-   > rm -rf "$tmpdir"
+   >   2>"$tmpdir/stderr.txt"
+   > if [ $? -ne 0 ] || [ ! -s "$tmpdir/codex.txt" ]; then
+   >   cat "$tmpdir/stderr.txt"
+   >   exit 1
+   > fi
+   > cat "$tmpdir/codex.txt"
    > ```
-   >
-   > If codex fails (non-zero exit or empty output file), read $tmpdir/stderr.txt and report the error instead.
 
    **Kimi reviewer** (if opencode CLI is available):
    Use the Agent tool with `subagent_type: "general-purpose"` and `run_in_background: true`.
@@ -73,16 +75,18 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    >
    > Run as a single Bash command:
    > ```bash
-   > tmpdir=$(mktemp -d) && \
+   > tmpdir=$(mktemp -d)
+   > trap 'rm -rf "$tmpdir"' EXIT
    > cat "<plan-file-path>" | opencode run \
    >   -m "fireworks-ai/accounts/fireworks/models/kimi-k2p5" \
    >   -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone? 2) Are acceptance criteria clear? 3) Does it include test coverage? 4) Does it match repo conventions? Provide specific, actionable feedback." \
-   >   > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt" && \
-   > cat "$tmpdir/output.txt" && \
-   > rm -rf "$tmpdir"
+   >   > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"
+   > if [ $? -ne 0 ] || [ ! -s "$tmpdir/output.txt" ]; then
+   >   cat "$tmpdir/stderr.txt"
+   >   exit 1
+   > fi
+   > cat "$tmpdir/output.txt"
    > ```
-   >
-   > If opencode fails (non-zero exit or empty output file), read $tmpdir/stderr.txt and report the error instead.
 
    **CodeRabbit reviewer**:
    Use the Agent tool with `subagent_type: "coderabbit:code-reviewer"` and `run_in_background: true`.

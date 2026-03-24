@@ -38,7 +38,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    tmpdir=$(mktemp -d) && \
    echo "TMPDIR=$tmpdir" && \
    codex exec --full-auto -o "$tmpdir/codex.txt" \
-     "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? <additional-user-prompt-if-any>. Provide specific, actionable feedback organized by category.
+     "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? Provide specific, actionable feedback organized by category.
 
    ---BEGIN PLAN---
    $(cat "<plan-file-path>")
