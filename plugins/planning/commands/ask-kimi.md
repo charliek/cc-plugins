@@ -29,9 +29,11 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 
 4. **Submit the plan to Kimi for review**: Pipe the plan content to opencode with a review prompt.
 
-   Create a temp directory for output capture: `tmpdir=$(mktemp -d)`
+   Run the following as a **single Bash command** (the temp directory variable must remain in scope):
 
    ```bash
+   tmpdir=$(mktemp -d) && \
+   echo "TMPDIR=$tmpdir" && \
    cat "<plan-file-path>" | opencode run \
      -m "fireworks-ai/accounts/fireworks/models/kimi-k2p5" \
      -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? Provide specific, actionable feedback organized by category." \
@@ -39,6 +41,8 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    ```
 
    **Important:** Always use `--` before the message to prevent it from being interpreted as file paths. Pipe the plan via stdin rather than using `-f` for files outside the repo (opencode may reject external directory permissions).
+
+   **Note the temp directory path** from the `TMPDIR=...` output line — use it when reading output files and during cleanup.
 
    Check the exit code. If non-zero, read `$tmpdir/stderr.txt` for error details and stop. Otherwise read `$tmpdir/output.txt` for the review.
 
@@ -54,4 +58,4 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    - **Circuit breaker**: Maximum 2 total review passes. After the second, stop and report regardless.
 
 8. **Report results**: Summarize what was refined (step 3), what Kimi found, what was incorporated, and what was skipped
-   - Clean up: `rm -rf "$tmpdir"`
+   - Clean up: `rm -rf "$tmpdir"` (use the actual temp directory path from step 4)

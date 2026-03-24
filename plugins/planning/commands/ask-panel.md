@@ -34,27 +34,28 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    - **Repo patterns**: Ensure the plan matches the repo's architectural patterns and conventions.
    - Edit the plan file with any needed refinements before proceeding.
 
-4. **Run reviews in parallel**: Launch all available reviewers concurrently.
+4. **Run reviews in parallel**: Launch all available reviewers concurrently. Warn the user this may take a couple minutes.
 
-   Create a temp directory:
-   ```bash
-   tmpdir=$(mktemp -d)
-   ```
+   **Launch Codex and Kimi via Bash** — Run the following as a **single Bash command**. All variable assignments (`tmpdir`, PIDs, exit statuses) must stay in the same shell. If a CLI tool was unavailable (detected in step 1), omit its lines from the script:
 
-   **Launch Codex** (in background, if available):
    ```bash
-   (echo "Review the following implementation plan. Evaluate standalone readability, acceptance criteria, test coverage, and repo pattern alignment. Provide specific, actionable feedback organized by category."; echo ""; echo "---BEGIN PLAN---"; cat "<plan-file-path>"; echo "---END PLAN---") | codex exec - > "$tmpdir/codex.txt" 2>"$tmpdir/codex-stderr.txt" &
-   codex_pid=$!
-   ```
-
-   **Launch Kimi** (in background, if available):
-   ```bash
+   tmpdir=$(mktemp -d) && \
+   echo "Temp directory: $tmpdir" && \
+   (echo "Review the following implementation plan. Evaluate standalone readability, acceptance criteria, test coverage, and repo pattern alignment. Provide specific, actionable feedback organized by category."; echo ""; echo "---BEGIN PLAN---"; cat "<plan-file-path>"; echo "---END PLAN---") | codex exec - -o "$tmpdir/codex.txt" 2>"$tmpdir/codex-stderr.txt" & \
+   codex_pid=$! ; \
    cat "<plan-file-path>" | opencode run \
      -m "fireworks-ai/accounts/fireworks/models/kimi-k2p5" \
      -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone? 2) Are acceptance criteria clear? 3) Does it include test coverage? 4) Does it match repo conventions? Provide specific, actionable feedback." \
-     > "$tmpdir/kimi.txt" 2>"$tmpdir/kimi-stderr.txt" &
-   kimi_pid=$!
+     > "$tmpdir/kimi.txt" 2>"$tmpdir/kimi-stderr.txt" & \
+   kimi_pid=$! ; \
+   echo "Launched Codex (PID $codex_pid) and Kimi (PID $kimi_pid)" && \
+   wait $codex_pid 2>/dev/null; codex_status=$? ; \
+   wait $kimi_pid 2>/dev/null; kimi_status=$? ; \
+   echo "Codex exit: $codex_status, Kimi exit: $kimi_status" && \
+   echo "TMPDIR=$tmpdir"
    ```
+
+   **Important:** The `-o` flag on `codex exec` writes Codex's final response to the specified file. Do not use stdout redirection — `codex exec` produces no stdout output for multi-step sessions.
 
    **Launch CodeRabbit** (via Agent tool with `run_in_background: true`):
    Use the Agent tool with `subagent_type: "coderabbit:code-reviewer"` and include the full plan text in the prompt along with these review questions:
@@ -65,21 +66,13 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    5. Are there any risks, gaps, or missing edge cases?
    Ask the agent to read relevant repo files to ground its review.
 
-   If a CLI tool was skipped (unavailable), set its PID to `""`.
-
-   **Wait for CLI tools**:
-   ```bash
-   [ -n "$codex_pid" ] && { wait $codex_pid; codex_status=$?; } || codex_status=""
-   [ -n "$kimi_pid" ] && { wait $kimi_pid; kimi_status=$?; } || kimi_status=""
-   ```
-
    Wait for the CodeRabbit agent to complete as well.
 
-   Warn the user this may take a couple minutes.
+   **Note the temp directory path** from the Bash output (`TMPDIR=...` line) for use in step 5.
 
-5. **Collect results**:
-   - Read `$tmpdir/codex.txt` for Codex findings (check `codex_status` first)
-   - Read `$tmpdir/kimi.txt` for Kimi findings (check `kimi_status` first)
+5. **Collect results**: Use the temp directory path printed by the script in step 4.
+   - Read `$tmpdir/codex.txt` for Codex findings (if `codex_status` was 0; otherwise read `$tmpdir/codex-stderr.txt`)
+   - Read `$tmpdir/kimi.txt` for Kimi findings (if `kimi_status` was 0; otherwise read `$tmpdir/kimi-stderr.txt`)
    - Read the CodeRabbit agent's returned result
    - If any tool failed, proceed with the others' findings
 
@@ -104,4 +97,4 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    - **Findings skipped**: What was not addressed and why
    - **Contradictions**: Any disagreements flagged for user review
    - **Tool failures**: If any tool failed or was skipped, explain why
-   - Clean up: `rm -rf "$tmpdir"`
+   - Clean up: `rm -rf "$tmpdir"` (use the temp directory path from step 4)
