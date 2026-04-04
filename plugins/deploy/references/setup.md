@@ -47,8 +47,8 @@ jobs:
         with:
           images: <region>-docker.pkg.dev/<project>/<repo>/<image>
           tags: |
-            type=raw,value=latest
             type=raw,value={{date 'YYYY.MM.DD'}}-{{sha}}
+            type=ref,event=tag
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -61,6 +61,8 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 ```
+
+The `type=ref,event=tag` line produces an image tag matching the git tag (e.g., `v2026.04.04`), which can be used for explicit deploys to Cloud Run or Kamal. The date+SHA tag provides an immutable reference for debugging.
 
 Adapt the registry authentication and image naming to your setup (GCP Artifact Registry, AWS ECR, Docker Hub, GitHub Container Registry, etc.).
 
