@@ -55,7 +55,7 @@ Use `$ARGUMENTS` as an optional version. If provided and valid, skip the version
    - Include Co-Authored-By line
 
 8. **Create and push tag**: Trigger the release workflow
-   - Create tag: `git tag vX.Y.Z`
+   - Create annotated tag: `git tag -a vX.Y.Z -m "vX.Y.Z"`
    - Push commit and tag: `git push --follow-tags`
 
 9. **Confirm success**: Show the release URL
