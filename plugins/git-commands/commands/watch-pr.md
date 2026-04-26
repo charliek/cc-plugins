@@ -37,8 +37,15 @@ Use `$ARGUMENTS` as an optional PR number. If not provided, use the PR associate
 5. **Wait for bot review**: Check for bot review tools
    - Look at the PR checks for any bot review tool (e.g. CodeRabbit)
    - If no bot review tool is detected, skip to step 7
-   - Poll for review comments up to 15 minutes using `gh pr view <number> --json reviews,comments` every 60 seconds
-   - If no review arrives within 15 minutes, move to step 7
+   - Poll for review comments using `gh pr view <number> --json reviews,comments`.
+     CodeRabbit typically completes within a few minutes; if no review
+     has appeared after ~10 minutes, move on to step 7.
+   - **Note:** parallel reviewers spawned via the `Agent` tool (e.g.
+     `subagent_type: "codex:codex-rescue"` or
+     `subagent_type: "coderabbit:code-reviewer"`) are *complementary*
+     to the automatic CodeRabbit check on the PR — different reviewer,
+     different perspective. If you launched one in parallel with
+     `/watch-pr`, synthesize both sets of findings before responding.
 
 6. **Handle review comments**: Evaluate and address feedback
    - Read the review comments from the PR
