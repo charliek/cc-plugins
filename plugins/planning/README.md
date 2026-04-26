@@ -10,7 +10,7 @@ Submit a plan to Codex CLI (OpenAI) for review. Pipes review instructions and pl
 
 ### `/planning:ask-kimi [plan-file-path]`
 
-Submit a plan to Kimi K2.5 (Moonshot AI via Fireworks) for review using opencode CLI. Kimi proactively explores the repository to understand conventions before reviewing the plan.
+Submit a plan to Kimi K2.6 (Moonshot AI via Fireworks) for review using opencode CLI. Kimi proactively explores the repository to understand conventions before reviewing the plan.
 
 ### `/planning:ask-coderabbit [plan-file-path]`
 

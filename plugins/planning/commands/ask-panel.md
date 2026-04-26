@@ -1,14 +1,14 @@
 ---
-description: Ask Codex, Kimi K2.5, and CodeRabbit to review a plan in parallel, synthesize and incorporate feedback
+description: Ask Codex, Kimi K2.6, and CodeRabbit to review a plan in parallel, synthesize and incorporate feedback
 argument-hint: "[plan-file-path]"
 ---
 
 # Ask Panel Command
 
-Run Codex, Kimi K2.5, and CodeRabbit plan reviews in parallel, synthesize their feedback, and incorporate improvements. Three different AI reviewers provide broad coverage and high confidence in findings they agree on.
+Run Codex, Kimi K2.6, and CodeRabbit plan reviews in parallel, synthesize their feedback, and incorporate improvements. Three different AI reviewers provide broad coverage and high confidence in findings they agree on.
 
 - **Codex** (OpenAI) — reviews via `codex exec`, explores the repo with `--full-auto`
-- **Kimi K2.5** (Moonshot AI via Fireworks) — reviews via `opencode run`, proactively explores the repo
+- **Kimi K2.6** (Moonshot AI via Fireworks) — reviews via `opencode run`, proactively explores the repo
 - **CodeRabbit** — reviews via `coderabbit:code-reviewer` agent, reads repo files directly
 
 Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the active plan file from the current conversation context (typically in `~/.claude/plans/`).
@@ -73,14 +73,14 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    Use the Agent tool with `subagent_type: "general-purpose"` and `run_in_background: true`.
    Prompt the agent to run the Kimi review and return only the review text:
 
-   > You are a plan reviewer. Run the following Bash command to get a Kimi K2.5 review of an implementation plan, then return ONLY the review text (no commentary or wrapper).
+   > You are a plan reviewer. Run the following Bash command to get a Kimi K2.6 review of an implementation plan, then return ONLY the review text (no commentary or wrapper).
    >
    > Run as a single Bash command:
    > ```bash
    > tmpdir=$(mktemp -d)
    > trap 'rm -rf "$tmpdir"' EXIT
    > cat "<plan-file-path>" | opencode run \
-   >   -m "fireworks-ai/accounts/fireworks/models/kimi-k2p5" \
+   >   -m "fireworks-ai/accounts/fireworks/models/kimi-k2p6" \
    >   -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone? 2) Are acceptance criteria clear? 3) Does it include test coverage? 4) Does it match repo conventions? Provide specific, actionable feedback." \
    >   > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"
    > if [ $? -ne 0 ] || [ ! -s "$tmpdir/output.txt" ]; then
