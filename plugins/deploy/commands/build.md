@@ -7,6 +7,14 @@ description: Create a date-based release to trigger Docker image builds and site
 Create a new deployment release by generating a changelog entry, committing it, and pushing a date-based version tag.
 This triggers the release workflow which builds and pushes Docker images.
 
+**Execution discipline for release steps.** Release operations move
+refs and create tags — don't chain them through `&&` with piped output
+(e.g. `git commit -m ... | tail -3 && git tag ...`). Piping masks the
+exit status of the left side, so a failed commit can still advance to
+the tag step and produce a tag pointing at the wrong SHA. Run each
+destructive step on its own, verify the expected state with the
+post-step check listed below, then move on.
+
 ## Steps
 
 1. **Check branch**: Ensure we're on the main branch
@@ -48,12 +56,39 @@ This triggers the release workflow which builds and pushes Docker images.
 
 7. **Commit the changelog**: Create a release commit
    - Stage CHANGELOG.md: `git add CHANGELOG.md`
-   - Commit with message: `Release vYYYY.MM.DD`
-   - Include Co-Authored-By line
+   - Commit with inline `-m` flags — do **not** use `git commit -F <file>`.
+     A stale temp file left over from a previous session can silently
+     produce a wrong commit message; inline avoids the whole class of
+     bug:
+     ```bash
+     git commit -m "Release vYYYY.MM.DD" -m "<your Co-Authored-By line>"
+     ```
+   - Run this as its own command. Don't chain it with `&&` through
+     `| tail -N` — the pipe masks the commit's exit status.
+   - **Verify the commit landed before tagging:**
+     ```bash
+     git log -1 --pretty=%s
+     ```
+     This must print `Release vYYYY.MM.DD`. If it doesn't, stop and
+     reconcile (likely cause: nothing was staged, or a previous step
+     failed silently). Don't tag the wrong commit.
 
 8. **Create and push tag**: Trigger the release workflow
-   - Create tag: `git tag vYYYY.MM.DD`
-   - Push commit and tag: `git push --follow-tags`
+   - Create an **annotated** tag so `git push --follow-tags` actually
+     pushes it (lightweight tags are skipped by `--follow-tags`):
+     ```bash
+     git tag -a vYYYY.MM.DD -m "vYYYY.MM.DD"
+     ```
+   - **Verify the tag points at the Release commit you just made:**
+     ```bash
+     [ "$(git rev-list -n1 vYYYY.MM.DD)" = "$(git rev-parse HEAD)" ] \
+       && echo "tag SHA OK" || echo "tag does NOT point at HEAD — STOP"
+     ```
+     If the tag doesn't point at HEAD, fix locally before pushing.
+   - Push commit and tag together:
+     ```bash
+     git push --follow-tags
+     ```
 
 9. **Confirm success**: Show the release URL
    - Get the repo URL: `gh repo view --json url --jq '.url'`
