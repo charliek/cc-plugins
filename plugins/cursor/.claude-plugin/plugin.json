@@ -1,0 +1,7 @@
+{
+  "name": "cursor",
+  "description": "Delegate coding tasks and code reviews to the Cursor agent CLI from Claude Code",
+  "author": {
+    "name": "charliek"
+  }
+}
