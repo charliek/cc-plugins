@@ -44,11 +44,13 @@ Run the review:
   ```bash
   {
     cat <<'CURSOR_REVIEW'
-  Review the code changes below. They are the uncommitted working-tree changes of this repository, provided inline between the markers. This is review-only — do not edit anything. You MAY read other files in the repo for context, but do not modify anything. Report concrete findings ordered by severity (most serious first), each with the exact file path and line number and a short explanation. Cover correctness, edge cases, security, and likely bugs. Also read any untracked files listed below (their contents are not in the diff). If you find nothing significant, say so and note residual risk briefly.
+  Review the code changes below. They are the uncommitted working-tree changes of this repository, provided inline between the "=== BEGIN CHANGES ===" and "=== END CHANGES ===" markers. This is review-only — do not edit anything. You MAY read other files in the repo for context, but do not modify anything. Report concrete findings ordered by severity (most serious first), each with the exact file path and line number and a short explanation. Cover correctness, edge cases, security, and likely bugs. Also read any untracked files listed below (their contents are not in the diff). If you find nothing significant, say so and note residual risk briefly.
   CURSOR_REVIEW
-    echo; echo "=== changed files ==="; git status --short --untracked-files=all
-    echo; echo "=== staged diff ==="; git diff --cached
-    echo; echo "=== unstaged diff ==="; git diff
+    echo "=== BEGIN CHANGES ==="
+    echo; echo "--- changed files ---"; git status --short --untracked-files=all
+    echo; echo "--- staged diff ---"; git diff --cached
+    echo; echo "--- unstaged diff ---"; git diff
+    echo "=== END CHANGES ==="
   } | agent -p --mode plan --model gpt-5.5-high
   ```
 
@@ -57,13 +59,16 @@ Run the review:
   ```bash
   {
     cat <<'CURSOR_REVIEW'
-  Review the code changes below. They are the diff of HEAD against <base> for this repository, provided inline between the markers. This is review-only — do not edit anything. You MAY read other files in the repo for context, but do not modify anything. Report concrete findings ordered by severity (most serious first), each with the exact file path and line number and a short explanation. Cover correctness, edge cases, security, and likely bugs. If you find nothing significant, say so and note residual risk briefly.
+  Review the code changes below. They are the diff of HEAD against <base> for this repository, provided inline between the "=== BEGIN CHANGES ===" and "=== END CHANGES ===" markers. This is review-only — do not edit anything. You MAY read other files in the repo for context, but do not modify anything. Report concrete findings ordered by severity (most serious first), each with the exact file path and line number and a short explanation. Cover correctness, edge cases, security, and likely bugs. If you find nothing significant, say so and note residual risk briefly.
   CURSOR_REVIEW
-    echo; echo "=== changed files (vs <base>) ==="; git diff --name-status <base>...HEAD
-    echo; echo "=== diff (vs <base>) ==="; git diff <base>...HEAD
+    echo "=== BEGIN CHANGES ==="
+    echo; echo "--- changed files (vs <base>) ---"; git diff --name-status <base>...HEAD
+    echo; echo "--- diff (vs <base>) ---"; git diff <base>...HEAD
+    echo "=== END CHANGES ==="
   } | agent -p --mode plan --model gpt-5.5-high
   ```
 
+  - The heredoc body is fixed instruction text (no user-controlled input), so `CURSOR_REVIEW` is collision-safe here. The streamed diff cannot collide — it arrives after the heredoc closes.
   - `--mode plan` keeps Cursor read-only (it analyzes and may read files, but makes no edits).
   - Use `timeout: 600000` on foreground runs. For `--background`, launch this `Bash` pipeline with `run_in_background: true` and tell the user: "Cursor review started in the background." Do not wait for it in this turn.
   - If the user passed `--model <id>`, use it in place of `gpt-5.5-high`.

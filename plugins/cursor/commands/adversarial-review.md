@@ -33,16 +33,19 @@ Run the review:
   ```bash
   {
     cat <<'CURSOR_REVIEW'
-  Adversarially review the code changes below — the uncommitted working-tree changes of this repository, provided inline between the markers. This is review-only — do not edit anything. You MAY read other files in the repo for context, but do not modify anything. Challenge the approach itself: question the design choices, tradeoffs, and assumptions; identify where this could fail under real-world conditions (scale, concurrency, failure modes, edge cases, maintainability); and propose stronger alternatives where the chosen approach is weak. <If focus text was provided, append: "Focus especially on: <focus text>."> Order findings by severity, each with exact file path and line number where applicable and a short rationale.
+  Adversarially review the code changes below — the uncommitted working-tree changes of this repository, provided inline between the "=== BEGIN CHANGES ===" and "=== END CHANGES ===" markers. This is review-only — do not edit anything. You MAY read other files in the repo for context, but do not modify anything. Challenge the approach itself: question the design choices, tradeoffs, and assumptions; identify where this could fail under real-world conditions (scale, concurrency, failure modes, edge cases, maintainability); and propose stronger alternatives where the chosen approach is weak. <If focus text was provided, append: "Focus especially on: <focus text>."> Order findings by severity, each with exact file path and line number where applicable and a short rationale.
   CURSOR_REVIEW
-    echo; echo "=== changed files ==="; git status --short --untracked-files=all
-    echo; echo "=== staged diff ==="; git diff --cached
-    echo; echo "=== unstaged diff ==="; git diff
+    echo "=== BEGIN CHANGES ==="
+    echo; echo "--- changed files ---"; git status --short --untracked-files=all
+    echo; echo "--- staged diff ---"; git diff --cached
+    echo; echo "--- unstaged diff ---"; git diff
+    echo "=== END CHANGES ==="
   } | agent -p --mode plan --model gpt-5.5-high
   ```
 
 - **Branch / base scope** (replace `<base>` with the resolved ref, default `main`): use the same pipeline but stream `git diff --name-status <base>...HEAD` and `git diff <base>...HEAD`, and word the heredoc as "the diff of HEAD against <base>".
 
+  - **Pick a collision-free delimiter.** The heredoc body here includes user-controlled focus text. If that text contains a line exactly equal to `CURSOR_REVIEW`, the heredoc would close early. If the focus text could contain such a line, use a unique delimiter (e.g. `CURSOR_REVIEW_a1b2c3d4`) for both the opener and closer. (The streamed diff cannot collide — it arrives after the heredoc closes.)
   - `--mode plan` keeps Cursor read-only. Use `timeout: 600000` on foreground runs. For `--background`, launch the pipeline with `run_in_background: true` and tell the user: "Cursor adversarial review started in the background." Do not wait for it in this turn.
   - If the user passed `--model <id>`, use it in place of `gpt-5.5-high`.
 

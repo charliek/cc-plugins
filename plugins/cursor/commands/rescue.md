@@ -14,6 +14,8 @@ Default model: `gpt-5.5-high` (override with `--model <id>`; run `agent --list-m
 
 Build a single `agent` invocation. **Pass the task text via a quoted heredoc on stdin, never as an inline quoted argument** — this prevents `$(...)`, backticks, `$VAR`, quotes, and newlines in the task from being expanded by Bash. `agent -p` reads the prompt from stdin when no prompt argument is given.
 
+**Pick a collision-free delimiter.** `CURSOR_TASK` is the default below, but if any line of the task text equals the delimiter exactly, the heredoc would close early and the rest would be parsed as shell. Check the task text first; if it contains such a line, use a unique delimiter (e.g. `CURSOR_TASK_a1b2c3d4`) for both the opener and closer.
+
 Write-capable run (the default):
 
 ```bash

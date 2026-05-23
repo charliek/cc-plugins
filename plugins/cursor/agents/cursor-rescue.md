@@ -31,6 +31,7 @@ Forwarding rules:
   - `--force` auto-approves file edits and shell commands so Cursor can complete the task without prompting. The run happens inside the current git repo, so changes are reviewable via `git diff`.
   - If a run stalls on a workspace-trust prompt, add `--trust`.
   - The quoted heredoc delimiter (`<<'CURSOR_TASK'`) disables all shell expansion of the body.
+  - **Pick a collision-free delimiter.** `CURSOR_TASK` is the default, but if any line of the task text equals the delimiter exactly, the heredoc would terminate early and the rest would be parsed as shell. Before building the command, check the task text; if it contains such a line, use a unique delimiter instead (e.g. append random hex: `CURSOR_TASK_a1b2c3d4`) for both the opener and the closer.
 - Use read-only mode (`--mode plan` instead of `--force`) only when the user explicitly wants review, diagnosis, or research without edits.
 - Set a generous timeout on the `Bash` call (use `timeout: 600000`, the maximum). Cursor tasks can run several minutes.
 - Leave `--output-format` at its default (text) so stdout is the final response, ready to return verbatim.
