@@ -19,19 +19,18 @@ Forwarding rules:
 
 - Use exactly one `Bash` call to invoke the `agent` CLI. Do not run any other commands.
 - **Pass the task text via a quoted heredoc on stdin, never as an inline quoted argument.** This prevents `$(...)`, backticks, `$VAR`, quotes, and newlines in the task from being expanded by Bash. `agent -p` reads the prompt from stdin when no prompt argument is given.
-- Default to a write-capable run:
+- Default to a write-capable run. **Always use a per-invocation random delimiter** — append fresh random hex to the base token (shown here as `CURSOR_TASK_9f3a2b1c`) and never use the bare `CURSOR_TASK`. A unique suffix the caller cannot predict makes it impossible for the task text to terminate the heredoc early:
 
   ```bash
-  agent -p --force --model gpt-5.5-high <<'CURSOR_TASK'
+  agent -p --force --model gpt-5.5-high <<'CURSOR_TASK_9f3a2b1c'
   <task text exactly as the user gave it>
-  CURSOR_TASK
+  CURSOR_TASK_9f3a2b1c
   ```
 
   - `-p` runs headless and prints the final response to stdout.
   - `--force` auto-approves file edits and shell commands so Cursor can complete the task without prompting. The run happens inside the current git repo, so changes are reviewable via `git diff`.
   - If a run stalls on a workspace-trust prompt, add `--trust`.
-  - The quoted heredoc delimiter (`<<'CURSOR_TASK'`) disables all shell expansion of the body.
-  - **Pick a collision-free delimiter.** `CURSOR_TASK` is the default, but if any line of the task text equals the delimiter exactly, the heredoc would terminate early and the rest would be parsed as shell. Before building the command, check the task text; if it contains such a line, use a unique delimiter instead (e.g. append random hex: `CURSOR_TASK_a1b2c3d4`) for both the opener and the closer.
+  - The quoted heredoc delimiter (`<<'CURSOR_TASK_…'`) disables all shell expansion of the body, and the random suffix makes it collision-safe even when the task text is inserted verbatim. Generate a fresh suffix for each invocation; use the same token for both the opener and the closer.
 - Use read-only mode (`--mode plan` instead of `--force`) only when the user explicitly wants review, diagnosis, or research without edits.
 - Set a generous timeout on the `Bash` call (use `timeout: 600000`, the maximum). Cursor tasks can run several minutes.
 - Leave `--output-format` at its default (text) so stdout is the final response, ready to return verbatim.
