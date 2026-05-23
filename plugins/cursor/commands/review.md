@@ -37,15 +37,35 @@ Estimate size, then choose execution mode:
 
 Run the review:
 
-- Invoke the Cursor agent in read-only mode (`--mode plan`) so it cannot edit. **Pass the review prompt via a quoted heredoc on stdin, not as an inline quoted argument** — the prompt contains backticks and `<...>` placeholders, and the quoted heredoc (`<<'CURSOR_REVIEW'`) prevents Bash from expanding them. Name the review target and tell Cursor to inspect the diff itself:
+**Feed the diff in — do not ask Cursor to discover the changes itself.** This mirrors how the Codex and CodeRabbit reviewers work (a deterministic layer extracts the diff and hands it to the reviewer) and avoids depending on Cursor's in-sandbox command approval. Build the prompt as a single pipeline: a quoted heredoc carries the review instructions, and `git` streams the actual diff into the same stdin. Because the diff arrives as `git`'s output (not via inline interpolation or `$(…)`), no shell expansion of the diff content can occur.
+
+- **Working-tree scope** (uncommitted: staged + unstaged + untracked):
 
   ```bash
-  agent -p --mode plan --model gpt-5.5-high <<'CURSOR_REVIEW'
-  Review the local code changes in this repository. Target: <describe scope — e.g. "uncommitted working-tree changes" or "the diff of HEAD against <base>">. Inspect them yourself with git (e.g. `git status --short --untracked-files=all`, `git diff`, or `git diff <base>...HEAD`) and read the surrounding files for context. This is review-only — do not edit anything. Report concrete findings ordered by severity (most serious first), each with the exact file path and line number and a short explanation. Cover correctness, edge cases, security, and likely bugs. If you find nothing significant, say so and note residual risk briefly.
+  {
+    cat <<'CURSOR_REVIEW'
+  Review the code changes below. They are the uncommitted working-tree changes of this repository, provided inline between the markers. This is review-only — do not edit anything. You MAY read other files in the repo for context, but do not modify anything. Report concrete findings ordered by severity (most serious first), each with the exact file path and line number and a short explanation. Cover correctness, edge cases, security, and likely bugs. Also read any untracked files listed below (their contents are not in the diff). If you find nothing significant, say so and note residual risk briefly.
   CURSOR_REVIEW
+    echo; echo "=== changed files ==="; git status --short --untracked-files=all
+    echo; echo "=== staged diff ==="; git diff --cached
+    echo; echo "=== unstaged diff ==="; git diff
+  } | agent -p --mode plan --model gpt-5.5-high
   ```
 
-  - Use `timeout: 600000` on foreground runs. For `--background`, launch this `Bash` call with `run_in_background: true` and tell the user: "Cursor review started in the background." Do not wait for it in this turn.
+- **Branch / base scope** (replace `<base>` with the resolved ref, default `main`):
+
+  ```bash
+  {
+    cat <<'CURSOR_REVIEW'
+  Review the code changes below. They are the diff of HEAD against <base> for this repository, provided inline between the markers. This is review-only — do not edit anything. You MAY read other files in the repo for context, but do not modify anything. Report concrete findings ordered by severity (most serious first), each with the exact file path and line number and a short explanation. Cover correctness, edge cases, security, and likely bugs. If you find nothing significant, say so and note residual risk briefly.
+  CURSOR_REVIEW
+    echo; echo "=== changed files (vs <base>) ==="; git diff --name-status <base>...HEAD
+    echo; echo "=== diff (vs <base>) ==="; git diff <base>...HEAD
+  } | agent -p --mode plan --model gpt-5.5-high
+  ```
+
+  - `--mode plan` keeps Cursor read-only (it analyzes and may read files, but makes no edits).
+  - Use `timeout: 600000` on foreground runs. For `--background`, launch this `Bash` pipeline with `run_in_background: true` and tell the user: "Cursor review started in the background." Do not wait for it in this turn.
   - If the user passed `--model <id>`, use it in place of `gpt-5.5-high`.
 
 Present results:
