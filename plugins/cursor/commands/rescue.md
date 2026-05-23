@@ -1,33 +1,47 @@
 ---
-description: Delegate investigation, an explicit fix request, or follow-up work to the Cursor agent rescue subagent
+description: Delegate investigation, an explicit fix request, or follow-up work to the Cursor agent CLI
 argument-hint: "[--background|--wait] [--resume|--fresh] [--read-only] [--model <model>] [what Cursor should investigate, solve, or continue]"
 context: fork
-allowed-tools: AskUserQuestion
+allowed-tools: Bash(agent:*), AskUserQuestion
 ---
 
-Route this request to the `cursor:cursor-rescue` subagent.
-The final user-visible response must be the Cursor agent's output verbatim.
+Hand this request to the Cursor `agent` CLI and return its output verbatim.
 
 Raw user request:
 $ARGUMENTS
 
-Execution mode:
+Default model: `gpt-5.5-high` (override with `--model <id>`; run `agent --list-models` for ids).
 
-- If the request includes `--background`, run the `cursor:cursor-rescue` subagent in the background (launch the Agent tool with `run_in_background: true`).
-- If the request includes `--wait`, run the `cursor:cursor-rescue` subagent in the foreground.
-- If neither flag is present, default to foreground for a small, clearly bounded request. If the task looks complicated, open-ended, multi-step, or likely to keep Cursor running for a long time, prefer background.
-- `--background` and `--wait` are execution controls for Claude Code. Do not forward them to the `agent` CLI, and do not treat them as part of the task text.
+Build a single `agent` invocation. **Pass the task text via a quoted heredoc on stdin, never as an inline quoted argument** — this prevents `$(...)`, backticks, `$VAR`, quotes, and newlines in the task from being expanded by Bash. `agent -p` reads the prompt from stdin when no prompt argument is given.
 
-Routing flags (leave these in the request you hand to the subagent — it strips and applies them when building the `agent` command):
+Write-capable run (the default):
 
-- `--resume` / `--fresh`: continue the previous Cursor session vs. start clean. If the user clearly gave a follow-up instruction ("continue", "keep going", "resume", "apply the top fix", "dig deeper"), the subagent will continue automatically; pass `--fresh` only to force a new session.
-- `--read-only`: the subagent runs Cursor in read-only `--mode plan` (no edits) instead of the default write-capable `--force`.
-- `--model <id>`: a specific Cursor model id, replacing the default `gpt-5.5-high`. There is no `--effort` flag — reasoning level is part of the model id. Run `agent --list-models` to discover ids.
+```bash
+agent -p --force --model gpt-5.5-high <<'CURSOR_TASK'
+<task text exactly as the user gave it, with routing flags stripped>
+CURSOR_TASK
+```
 
-Operating rules:
+Read-only run (when `--read-only` is present, or the user only wants review/diagnosis/research without edits) — replace `--force` with `--mode plan`:
 
-- The subagent is a thin forwarder only. It uses one `Bash` call to invoke `agent -p ...` and returns that command's stdout as-is.
-- Return the Cursor agent's stdout verbatim to the user. Do not paraphrase, summarize, rewrite, or add commentary before or after it.
-- Do not ask the subagent to inspect files, monitor progress, summarize output, or do follow-up work of its own.
-- By default the rescue is write-capable (`--force`), so Cursor may edit files and run commands. Changes land in the current git repo and are reviewable via `git diff`.
-- If the user did not supply a request, ask what Cursor should investigate or fix before routing.
+```bash
+agent -p --mode plan --model gpt-5.5-high <<'CURSOR_TASK'
+<task text>
+CURSOR_TASK
+```
+
+Flag handling (strip these from the task text before placing it in the heredoc body — they are controls, not part of the prompt):
+
+- `--background`: run the `Bash` call with `run_in_background: true` and tell the user the Cursor task started in the background. Do not wait for it this turn.
+- `--wait` (or neither): run in the foreground with `timeout: 600000` (the maximum; Cursor tasks can run several minutes).
+- `--read-only`: use `--mode plan` instead of `--force`.
+- `--model <id>`: use it in place of `gpt-5.5-high`. There is no `--effort` flag — reasoning level is part of the model id.
+- `--resume`: add `--continue` (continue the previous Cursor session). `--fresh`: do not. If neither is given and the user is clearly continuing prior Cursor work ("continue", "keep going", "apply the top fix", "dig deeper"), add `--continue`; otherwise run fresh.
+- If a run stalls on a workspace-trust prompt, add `--trust`.
+
+Output:
+
+- Return the Cursor agent's stdout verbatim. Do not paraphrase, summarize, rewrite, or add commentary before or after it.
+- By default the run is write-capable (`--force`), so Cursor may edit files and run commands. Changes land in the current git repo and are reviewable via `git diff`.
+- On failure, do **not** fabricate a substitute answer. If the call fails or `agent` cannot be invoked, report the failure concisely (most actionable stderr lines); if `agent` looks missing or unauthenticated, direct the user to `/cursor:setup`.
+- If the user did not supply a request, ask what Cursor should investigate or fix before running.

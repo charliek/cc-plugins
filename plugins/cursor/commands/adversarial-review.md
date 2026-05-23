@@ -26,9 +26,12 @@ Determine the review target and execution mode exactly as in `/cursor:review`:
 
 Run the review:
 
+- **Pass the prompt via a quoted heredoc on stdin, not as an inline quoted argument** (it contains backticks, `<...>` placeholders, and user focus text that must not be shell-expanded):
+
   ```bash
-  agent -p --mode plan --model gpt-5.5-high \
-    "Adversarially review the local code changes in this repository. Target: <describe scope>. Inspect them yourself with git (e.g. \`git status --short --untracked-files=all\`, \`git diff\`, or \`git diff <base>...HEAD\`) and read surrounding files for context. This is review-only — do not edit anything. Challenge the approach itself: question the design choices, tradeoffs, and assumptions; identify where this could fail under real-world conditions (scale, concurrency, failure modes, edge cases, maintainability); and propose stronger alternatives where the chosen approach is weak. <If focus text was provided: 'Focus especially on: <focus text>.'> Order findings by severity, each with exact file path and line number where applicable and a short rationale."
+  agent -p --mode plan --model gpt-5.5-high <<'CURSOR_REVIEW'
+  Adversarially review the local code changes in this repository. Target: <describe scope>. Inspect them yourself with git (e.g. `git status --short --untracked-files=all`, `git diff`, or `git diff <base>...HEAD`) and read surrounding files for context. This is review-only — do not edit anything. Challenge the approach itself: question the design choices, tradeoffs, and assumptions; identify where this could fail under real-world conditions (scale, concurrency, failure modes, edge cases, maintainability); and propose stronger alternatives where the chosen approach is weak. <If focus text was provided: "Focus especially on: <focus text>.">  Order findings by severity, each with exact file path and line number where applicable and a short rationale.
+  CURSOR_REVIEW
   ```
 
   - Use `timeout: 600000` on foreground runs. For `--background`, launch this `Bash` call with `run_in_background: true` and tell the user: "Cursor adversarial review started in the background." Do not wait for it in this turn.

@@ -37,11 +37,12 @@ Estimate size, then choose execution mode:
 
 Run the review:
 
-- Invoke the Cursor agent in read-only mode so it cannot edit. Pass a prompt that names the review target and tells Cursor to inspect the diff itself:
+- Invoke the Cursor agent in read-only mode (`--mode plan`) so it cannot edit. **Pass the review prompt via a quoted heredoc on stdin, not as an inline quoted argument** — the prompt contains backticks and `<...>` placeholders, and the quoted heredoc (`<<'CURSOR_REVIEW'`) prevents Bash from expanding them. Name the review target and tell Cursor to inspect the diff itself:
 
   ```bash
-  agent -p --mode plan --model gpt-5.5-high \
-    "Review the local code changes in this repository. Target: <describe scope — e.g. 'uncommitted working-tree changes' or 'the diff of HEAD against <base>'>. Inspect them yourself with git (e.g. \`git status --short --untracked-files=all\`, \`git diff\`, or \`git diff <base>...HEAD\`) and read the surrounding files for context. This is review-only — do not edit anything. Report concrete findings ordered by severity (most serious first), each with the exact file path and line number and a short explanation. Cover correctness, edge cases, security, and likely bugs. If you find nothing significant, say so and note residual risk briefly."
+  agent -p --mode plan --model gpt-5.5-high <<'CURSOR_REVIEW'
+  Review the local code changes in this repository. Target: <describe scope — e.g. "uncommitted working-tree changes" or "the diff of HEAD against <base>">. Inspect them yourself with git (e.g. `git status --short --untracked-files=all`, `git diff`, or `git diff <base>...HEAD`) and read the surrounding files for context. This is review-only — do not edit anything. Report concrete findings ordered by severity (most serious first), each with the exact file path and line number and a short explanation. Cover correctness, edge cases, security, and likely bugs. If you find nothing significant, say so and note residual risk briefly.
+  CURSOR_REVIEW
   ```
 
   - Use `timeout: 600000` on foreground runs. For `--background`, launch this `Bash` call with `run_in_background: true` and tell the user: "Cursor review started in the background." Do not wait for it in this turn.

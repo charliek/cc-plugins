@@ -14,7 +14,7 @@ Check that the Cursor `agent` CLI is ready to use, then report a concise readine
    command -v agent
    ```
 
-   - If this fails, the CLI is not installed. Tell the user to install the Cursor CLI from the official source — `curl https://cursor.com/install -fsS | bash` (see https://cursor.com/cli) — and stop. Do **not** auto-run a `curl | bash` installer; let the user run it themselves (they can use the `! <command>` prefix to run it in this session).
+   - If this fails, the CLI is not installed. Tell the user to install the Cursor CLI from the official instructions at https://cursor.com/cli and stop. Do **not** auto-run an installer; let the user follow the official steps themselves (they can use the `! <command>` prefix to run a command in this session).
 
 2. **Check version and account:**
 
