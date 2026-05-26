@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "cc-plugins",
-  "description": "Shared plugins: git workflow commands, prox process manager, and more",
+  "description": "Shared plugins: git workflow commands, release and deploy tooling, and more",
   "owner": {
     "name": "charliek"
   },
@@ -10,12 +10,6 @@
       "name": "git-commands",
       "description": "Git workflow commands for watching PR CI checks, fixing failures, and merging PRs",
       "source": "./plugins/git-commands",
-      "category": "development"
-    },
-    {
-      "name": "prox",
-      "description": "Guidance for working with the prox process manager — configuration, CLI, proxy setup, and troubleshooting",
-      "source": "./plugins/prox",
       "category": "development"
     },
     {
