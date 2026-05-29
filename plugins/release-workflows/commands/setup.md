@@ -1,5 +1,5 @@
 ---
-description: Bootstrap a repo onto the release-workflows convention. Walks through the GitHub App install, repo secrets, branch-protection ruleset, scripts/release/update-version.sh, RELEASING.md, and .github/workflows/release.yml composition. Use whenever the user wants to set up releases for a new repo, migrate a repo to a new release flow, audit an existing release pipeline, add a new artifact pipeline (Sparkle appcast, Homebrew tap, apt repo, Docker push) to an existing release, or asks "how do I release this repo". Conversational walkthrough — asks at each phase, never auto-commits.
+description: Bootstrap a repo onto the release-workflows convention. Walks through the GitHub App install, repo secrets, branch-protection ruleset, scripts/release/update-version.sh, RELEASING.md, and .github/workflows/release.yml composition. Use whenever the user wants to set up the release-workflows convention on a new repo, migrate a repo to the release-workflows flow, add a new artifact pipeline (Sparkle appcast, Homebrew tap, apt repo, Docker push) to a release-workflows release, or asks "how do I release this repo using release-workflows". Conversational walkthrough — asks at each phase, never auto-commits.
 ---
 
 # Release-Workflows Setup
@@ -158,8 +158,14 @@ old shape conflicts), what stays the same.
 
 Write to `.github/workflows/release.yml`. Don't commit.
 
-After writing, run `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml'))"`
-to validate the YAML parses. Surface any error before the user reviews.
+YAML syntax validation is intentionally left to CI: a local check that
+catches outright syntax errors but not the actual class of bugs (job
+indentation mistakes, missing required fields, invalid action refs) is
+worse than no check, because it gives false confidence. CI will run on
+the next push and flag any real issue. If you want a stronger
+gate-before-commit, point the user at `actionlint` (which understands
+the GitHub Actions schema, not just YAML); they can install it
+separately.
 
 ## Phase 6 — Draft RELEASING.md
 

@@ -1,5 +1,5 @@
 ---
-description: Cut a semver release with a changelog entry and a version bump, two commits and a tag. Runs the repo's scripts/release/update-version.sh to bump every source-tree manifest mechanically. Use whenever the user asks to release, ship, cut, tag, bump version, or prepare vX.Y.Z. Requires the repo to have adopted the release-workflows convention (run /release-workflows:setup first if not).
+description: Cut a semver release with a changelog entry and a version bump, two commits and a tag. Runs the repo's scripts/release/update-version.sh to bump every source-tree manifest mechanically. Use whenever the user asks to release, cut a release, cut a tag for a release, ship a release, bump the release version, or prepare vX.Y.Z. Requires the repo to have adopted the release-workflows convention (run /release-workflows:setup first if not).
 argument-hint: "[version]"
 ---
 
@@ -50,21 +50,32 @@ proceed — usually they want to commit (or stash) before releasing.
 
 ### 3. Verify ci-success is green on HEAD
 
+Query for the `ci-success` check specifically (server-side `check_name`
+filter, so it doesn't get lost in pagination on busy repos):
+
 ```bash
-gh run list --commit "$(git rev-parse HEAD)" --status completed \
-  --json conclusion,name
+gh api "repos/$(gh repo view --json nameWithOwner -q .nameWithOwner)/commits/$(git rev-parse HEAD)/check-runs?check_name=ci-success" \
+  --jq '.check_runs | sort_by(.started_at) | last | {status, conclusion}'
 ```
 
-Every completed run must have `conclusion: success`. If the latest
-ci-success on HEAD is missing or failed, stop and tell the user. The
-release workflow itself will gate on this too — releasing against red
-CI is wasted CI time.
+Expected: `{ "status": "completed", "conclusion": "success" }`.
+
+If `status` is missing/empty, `ci-success` hasn't run on HEAD — wait
+and retry, or push if you haven't yet. If `status` is `in_progress`,
+wait until it completes. If `conclusion` is anything other than
+`success`, stop and tell the user — releasing against red CI is wasted
+CI time.
+
+The release workflow itself will gate on this too; this check is just
+a courtesy to avoid kicking off a release that's guaranteed to fail.
 
 ### 4. Resolve version
 
-If `$ARGUMENTS` is provided and matches `v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?`,
+If `$ARGUMENTS` is provided and matches `v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?`,
 use it. Otherwise prompt: *"What version should this release be? (e.g. v0.1.0,
-v1.2.0-rc1)"*. Validate the format.
+v1.2.0-rc1, v2.0.0-alpha-1)"*. Validate the format. Hyphens inside the
+pre-release identifier are legal per semver §9 — that's why the regex
+allows `-` in the suffix character class.
 
 Check the tag doesn't already exist:
 
@@ -124,20 +135,31 @@ wrong message; inline is unambiguous):
 ```bash
 git add CHANGELOG.md
 git commit -m "docs(changelog): vX.Y.Z entry" \
-           -m "Co-Authored-By: <your model identity line>"
+           -m "Co-Authored-By: <model> <noreply@anthropic.com>"
 ```
 
-Run that as its own command. Don't chain it through `| tail` and `&&`.
+The `Co-Authored-By` trailer is conventional — substitute your own
+model's identity (e.g. `Claude Opus 4.7 (1M context)`) so `git log`
+reflects who authored the prose. If you don't know what to put here,
+check the project's `CLAUDE.md` for a convention, otherwise default to
+your model name.
+
+Run that commit as its own command. Don't chain it through `| tail` and
+`&&` — the pipe masks the commit's exit status.
 
 Verify:
 
 ```bash
-git log -1 --pretty=%s
+if [ "$(git log -1 --pretty=%s)" = "docs(changelog): vX.Y.Z entry" ]; then
+  echo "OK"
+else
+  echo "STOP: last commit subject is not the changelog commit" >&2
+  exit 1
+fi
 ```
 
-Must print `docs(changelog): vX.Y.Z entry`. If it doesn't (likely cause:
-nothing was staged, or a previous step failed silently), stop and
-reconcile. Don't proceed to the bump.
+If verification fails (likely cause: nothing was staged, or a previous
+step failed silently), stop and reconcile. Don't proceed to the bump.
 
 ### 8. Run update-version.sh
 
@@ -169,20 +191,24 @@ git add -u
 already-tracked files. Since `update-version.sh` only mutates tracked
 manifests (the convention), this captures exactly what changed.
 
-Then commit:
+Then commit (same `Co-Authored-By` guidance as step 7):
 
 ```bash
 git commit -m "chore(version): bump to X.Y.Z" \
-           -m "Co-Authored-By: <your model identity line>"
+           -m "Co-Authored-By: <model> <noreply@anthropic.com>"
 ```
 
-Verify:
+Verify with proper exit status — the check must `exit 1` on mismatch
+so a downstream `set -e` shell catches it, not just print:
 
 ```bash
-git log -1 --pretty=%s
+if [ "$(git log -1 --pretty=%s)" = "chore(version): bump to X.Y.Z" ]; then
+  echo "OK"
+else
+  echo "STOP: last commit subject is not the version-bump commit" >&2
+  exit 1
+fi
 ```
-
-Must print `chore(version): bump to X.Y.Z`.
 
 ### 10. Tag (annotated) on the version commit
 
@@ -190,15 +216,20 @@ Must print `chore(version): bump to X.Y.Z`.
 git tag -a vX.Y.Z -m "vX.Y.Z"
 ```
 
-Verify the tag points at the version commit (which is HEAD):
+Verify the tag points at the version commit (which is HEAD) — proper
+exit status, not just an echo:
 
 ```bash
-[ "$(git rev-list -n1 vX.Y.Z)" = "$(git rev-parse HEAD)" ] \
-  && echo "tag SHA OK" || echo "tag does NOT point at HEAD — STOP"
+if [ "$(git rev-list -n1 vX.Y.Z)" = "$(git rev-parse HEAD)" ]; then
+  echo "tag SHA OK"
+else
+  echo "tag does NOT point at HEAD — STOP" >&2
+  exit 1
+fi
 ```
 
-If the tag doesn't point at HEAD, delete the tag (`git tag -d vX.Y.Z`)
-and figure out what happened locally before pushing.
+If verification fails, delete the tag (`git tag -d vX.Y.Z`) and figure
+out what happened locally before pushing.
 
 ### 11. Push commit and tag together
 
