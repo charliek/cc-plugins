@@ -1,0 +1,7 @@
+{
+  "name": "release-workflows",
+  "description": "Convention-based release pipeline — per-release skill (release) and bootstrap skill (setup) with templated update-version.sh, release.yml jobs, and RELEASING.md for repos using a shared GitHub App for bot-driven post-build asset updates.",
+  "author": {
+    "name": "charliek"
+  }
+}

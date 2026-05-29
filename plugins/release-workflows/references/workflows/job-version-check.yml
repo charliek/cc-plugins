@@ -1,0 +1,51 @@
+# version-check: assert the tag matches the repo's version manifest.
+#
+# Tag pushes (`vX.Y.Z`) carry a version embedded in the ref name. The
+# release skill's `scripts/release/update-version.sh` should have bumped
+# the manifest to match before tagging. This job is the cross-check —
+# it catches the case where the tag was created against the wrong
+# commit (e.g., a developer bypassed the skill).
+#
+# Substitution placeholders:
+#   <MANIFEST_PATH>     — the file holding the canonical version
+#                         (e.g. Cargo.toml, pyproject.toml, plugin.json,
+#                         build.gradle)
+#   <VERSION_EXTRACT>   — a shell snippet that reads MANIFEST_PATH and
+#                         prints just the version string to stdout. Examples
+#                         below.
+#
+# Examples of <VERSION_EXTRACT>:
+#
+#   Cargo.toml (workspace):
+#     grep -E '^version[[:space:]]*=' Cargo.toml | head -1 \
+#       | sed -E 's/^version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/'
+#
+#   pyproject.toml:
+#     grep -E '^version[[:space:]]*=' pyproject.toml | head -1 \
+#       | sed -E 's/^version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/'
+#
+#   plugin.json:
+#     jq -r '.version' .claude-plugin/plugin.json
+#
+#   build.gradle:
+#     grep -E '^version[[:space:]]*=' build.gradle | head -1 \
+#       | sed -E 's/^version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/'
+
+version-check:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+    - name: Assert tag matches <MANIFEST_PATH>
+      run: |
+        set -euo pipefail
+        tag="${GITHUB_REF_NAME}"
+        tag_ver="${tag#v}"
+        base_ver="${tag_ver%%-*}"   # strip any -rc1/-beta suffix
+        manifest_ver="$(<VERSION_EXTRACT>)"
+        echo "tag=${tag} (base ${base_ver})  manifest version=${manifest_ver}"
+        if [ "${base_ver}" != "${manifest_ver}" ]; then
+          echo "::error::tag ${tag} does not match <MANIFEST_PATH> version ${manifest_ver}. The release skill should bump the manifest before tagging — re-run /release-workflows:release if this looks wrong."
+          exit 1
+        fi

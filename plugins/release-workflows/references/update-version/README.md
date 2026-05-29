@@ -1,0 +1,69 @@
+# update-version templates
+
+This directory holds drop-in templates for `scripts/release/update-version.sh`,
+keyed by the manifest the repo uses to track its release version.
+
+The setup skill picks the right template (or composes a few when a repo has
+multiple manifests — e.g. a Cargo workspace that also ships a plugin.json)
+and emits a single script per repo.
+
+## Picker
+
+| Repo shape | Template | Bumps |
+|---|---|---|
+| Rust workspace (single canonical version in `[workspace.package].version`) | [`cargo-workspace.sh`](cargo-workspace.sh) | `Cargo.toml` + `Cargo.lock` |
+| Claude Code plugin (canonical version in `.claude-plugin/plugin.json`) | `plugin-json.sh` *(deferred until first consumer)* | `.claude-plugin/plugin.json` |
+| Python project (canonical version in `pyproject.toml [project].version`) | `pyproject.sh` *(deferred)* | `pyproject.toml` |
+| Java / Gradle (canonical version in `build.gradle` or `build.gradle.kts`) | `gradle.sh` *(deferred)* | the Gradle build file |
+| Go module without an in-source version | not needed | Go derives version from the tag; no source-tree bump |
+
+The "deferred" entries are tiny (10–30 lines each) and ship when the first
+repo of that shape adopts the convention.
+
+## Composition
+
+When a repo has multiple version sources (rare but real — a Cargo
+workspace that *also* ships a Claude plugin from a sub-directory), the
+setup skill emits a script that bumps both in sequence:
+
+```bash
+# scripts/release/update-version.sh
+set -euo pipefail
+V="${1:?usage: $0 <X.Y.Z>}"
+
+# Cargo workspace
+sed -i.bak -E 's/^version       = "[^"]+"/version       = "'"$V"'"/' Cargo.toml
+rm -f Cargo.toml.bak
+cargo update --workspace --offline >/dev/null
+
+# Embedded Claude plugin
+jq --arg v "$V" '.version = $v' .claude-plugin/plugin.json > .claude-plugin/plugin.json.tmp
+mv .claude-plugin/plugin.json.tmp .claude-plugin/plugin.json
+
+echo "Bumped Cargo.toml + Cargo.lock + plugin.json to $V"
+```
+
+That composition is something the setup skill produces with the user's
+input ("you have both X and Y; should both move together?"), not a
+prebuilt template.
+
+## Contract for any update-version.sh
+
+Whatever the template, every `update-version.sh` shares this contract:
+
+1. **One argument**: the semver string with no `v` prefix (e.g. `0.0.6`,
+   `1.2.3-beta1`). Validate it matches
+   `^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$`.
+2. **Idempotent**: re-running with the same version is a no-op (or
+   replaces the existing value with the same value — diffs to nothing).
+3. **No network**: nothing here should hit the registry/PyPI/etc.
+   Lockfile regeneration must use `--offline` or equivalent.
+4. **Verifies its own work**: after bumping, grep the result to confirm
+   the new version made it into the file. Fail loud if not.
+5. **Quiet on success**: print one line per file mutated, nothing else.
+   `set -euo pipefail` so silent failures don't reach the release skill.
+6. **Doesn't `git add`**: leaves the working tree dirty. The release
+   skill stages and commits.
+
+If a future template diverges from this contract, document the reason
+in the script's header so the next reader understands why.
