@@ -5,15 +5,21 @@
 # listens for a `repository_dispatch` event of a specific type and
 # republishes apt metadata. This job's job is just to notify.
 #
+# === Paste-ready fragment ===
+# This file's YAML is already indented by 2 spaces so it sits cleanly
+# under `jobs:` in release.yml. Copy from the first non-comment line to
+# the end of the file and paste under your `jobs:` block. Do not
+# re-indent.
+#
 # Substitution placeholders:
-#   <APT_RECEIVER_REPO>      — `<owner>/<repo>` of the receiver, e.g.
-#                              `charliek/apt-charliek`
+#   <APT_RECEIVER_REPO>      — `<owner>/<repo>` of the receiver
 #   <APT_EVENT_TYPE>         — the event_type the receiver listens for,
 #                              e.g. `publish`
 #   <APT_PACKAGE>            — your package's name as the receiver knows
-#                              it, e.g. `roost`
-#   <APT_DISPATCH_TOKEN>     — a PAT or fine-grained token in the
-#                              maintainer's account with
+#                              it
+#
+# Required secret:
+#   APT_DISPATCH_TOKEN       — a PAT or fine-grained token with
 #                              `repository_dispatch: write` on the
 #                              receiver repo. Set as a repo secret
 #                              named `APT_DISPATCH_TOKEN`.
@@ -24,29 +30,29 @@
 # up that way. Adjust the failure semantics here if your receiver
 # doesn't self-heal.
 
-apt-dispatch:
-  needs: linux            # the job that built and uploaded the .debs
-  runs-on: ubuntu-latest
-  steps:
-    - name: Dispatch <APT_RECEIVER_REPO> publish
-      env:
-        GH_TOKEN: ${{ secrets.APT_DISPATCH_TOKEN }}
-        TOKEN_SET: ${{ secrets.APT_DISPATCH_TOKEN != '' }}
-      run: |
-        set -euo pipefail
-        tag="${GITHUB_REF_NAME}"
-        case "${tag}" in
-          *-*)
-            echo "::notice::${tag} is a prerelease — skipping <APT_RECEIVER_REPO> dispatch."
+  apt-dispatch:
+    needs: linux            # the job that built and uploaded the .debs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch <APT_RECEIVER_REPO> publish
+        env:
+          GH_TOKEN: ${{ secrets.APT_DISPATCH_TOKEN }}
+          TOKEN_SET: ${{ secrets.APT_DISPATCH_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          case "${tag}" in
+            *-*)
+              echo "::notice::${tag} is a prerelease — skipping <APT_RECEIVER_REPO> dispatch."
+              exit 0
+              ;;
+          esac
+          if [ "${TOKEN_SET}" != "true" ]; then
+            echo "::warning::APT_DISPATCH_TOKEN not set — skipping dispatch. <APT_RECEIVER_REPO> can self-heal on its next scheduled run if it re-scans."
             exit 0
-            ;;
-        esac
-        if [ "${TOKEN_SET}" != "true" ]; then
-          echo "::warning::APT_DISPATCH_TOKEN not set — skipping dispatch. <APT_RECEIVER_REPO> can self-heal on its next scheduled run if it re-scans."
-          exit 0
-        fi
-        gh api "repos/<APT_RECEIVER_REPO>/dispatches" --method POST \
-          -f event_type=<APT_EVENT_TYPE> \
-          -F "client_payload[package]=<APT_PACKAGE>" \
-          -F "client_payload[tag]=${tag}"
-        echo "::notice::Dispatched <APT_RECEIVER_REPO> publish for <APT_PACKAGE> ${tag}."
+          fi
+          gh api "repos/<APT_RECEIVER_REPO>/dispatches" --method POST \
+            -f event_type=<APT_EVENT_TYPE> \
+            -F "client_payload[package]=<APT_PACKAGE>" \
+            -F "client_payload[tag]=${tag}"
+          echo "::notice::Dispatched <APT_RECEIVER_REPO> publish for <APT_PACKAGE> ${tag}."

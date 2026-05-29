@@ -27,7 +27,7 @@ cross-repo refs to chase when debugging.
 
 Every release workflow has the same skeleton:
 
-```
+```text
 on push tag v*:
   version-check        ← generic
   ci-gate              ← generic
@@ -41,6 +41,17 @@ The generic jobs are byte-for-byte the same across repos. The build
 jobs are repo-specific and stay inline. The publish jobs split: a few
 follow common patterns (covered by templates here), the rest are
 repo-specific.
+
+### Paste-ready indentation
+
+Each `job-*.yml` fragment file's YAML body is already indented by 2
+spaces so it sits cleanly under `jobs:` in `release.yml`. **Don't
+re-indent when pasting.** The `# === Paste-ready fragment ===` comment
+at the top of each file repeats this.
+
+After pasting all the jobs you need under your `jobs:` block, the
+result should look like the [`release.yml.example`](release.yml.example)
+skeleton (each job id at column 2, job content at column 4 or more).
 
 ## Substitution
 

@@ -178,6 +178,34 @@ A direct push by an admin should now print
 when the new commit has no ci-success yet. A bot push from CI using
 the App's token should print the same and succeed.
 
+### Step 4.4 — Edit an existing ruleset (instead of recreating it)
+
+If the ruleset already exists and you only need to add or change a
+bypass actor, **update** it in place — don't re-run the POST from
+Step 4.1, which would either fail with "ruleset name already exists"
+or create a duplicate.
+
+```bash
+REPO=<owner>/<repo>
+APP_ID=<your-app-id>
+
+# Find the ruleset's id
+RULESET_ID="$(gh api "/repos/${REPO}/rulesets" \
+  --jq '.[] | select(.name=="main-protection") | .id')"
+echo "ruleset id: ${RULESET_ID}"
+
+# Fetch its current body
+gh api "/repos/${REPO}/rulesets/${RULESET_ID}" > /tmp/ruleset.json
+
+# Edit /tmp/ruleset.json by hand (or with jq) to add the missing actor
+# under .bypass_actors. Then PUT it back:
+gh api -X PUT "/repos/${REPO}/rulesets/${RULESET_ID}" --input /tmp/ruleset.json \
+  | jq '{id, name, bypass_actors}'
+```
+
+GitHub's Rules UI (Repo Settings → Rules → Rulesets → main-protection →
+Bypass list) is just as good for this kind of one-off edit.
+
 ## Phase 5 — Sanity-check the wiring
 
 Use the bundled
@@ -199,9 +227,12 @@ proceeding to the first real release.
 If migrating the ruleset goes wrong:
 
 ```bash
-# Restore classic protection
+# Restore classic protection.
+# Note: `-F` (capital) sends the value as a JSON literal — required for
+# booleans and arrays. `-f` (lowercase) only sends strings; use it for
+# string values like the status-check contexts.
 gh api -X PUT "/repos/${REPO}/branches/main/protection" \
-  -f required_status_checks[strict]=false \
+  -F required_status_checks[strict]=false \
   -f required_status_checks[contexts][]=ci-success \
   -F enforce_admins=false \
   -F required_pull_request_reviews= \
@@ -216,8 +247,8 @@ gh api -X DELETE "/repos/${REPO}/rulesets/<id-from-previous-line>"
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `git push origin main` → `Required status check "ci-success" is expected` | Admin role missing from ruleset bypass | Re-run Step 4.1's ruleset PUT including `RepositoryRole` actor_id 5 |
-| `git push origin main` from CI bot → same error | App missing from ruleset bypass | Re-run Step 4.1's ruleset PUT including `Integration` actor_id `<APP_ID>` |
+| `git push origin main` → `Required status check "ci-success" is expected` | Admin role missing from ruleset bypass | Update the ruleset's `bypass_actors` (see Step 4.4 below) to include `{ actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "always" }` |
+| `git push origin main` from CI bot → same error | App missing from ruleset bypass | Update the ruleset's `bypass_actors` (see Step 4.4 below) to include `{ actor_id: <APP_ID>, actor_type: "Integration", bypass_mode: "always" }` |
 | `actions/create-github-app-token@v2` → `Bad credentials` | `RELEASE_BOT_APP_ID` or `RELEASE_BOT_APP_KEY` not set, or `.pem` corrupted | Re-upload the `.pem` from the password manager |
 | Bot push succeeds but workflow says "Resource not accessible by integration" | App is installed but doesn't have the right permission for the API call being made | Edit the App's permissions, then re-accept the installation |
 | CI says `App is installed but token has no access to <repo>` | App install missed this repo | Re-run Phase 2 and add the repo |

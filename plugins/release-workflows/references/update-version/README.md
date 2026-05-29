@@ -31,8 +31,8 @@ setup skill emits a script that bumps both in sequence:
 set -euo pipefail
 V="${1:?usage: $0 <X.Y.Z>}"
 
-# Cargo workspace
-sed -i.bak -E 's/^version       = "[^"]+"/version       = "'"$V"'"/' Cargo.toml
+# Cargo workspace (flexible whitespace — matches vanilla + aligned layouts)
+sed -i.bak -E 's/^version[[:space:]]*=[[:space:]]*"[^"]+"/version = "'"$V"'"/' Cargo.toml
 rm -f Cargo.toml.bak
 cargo update --workspace --offline >/dev/null
 
@@ -52,8 +52,9 @@ prebuilt template.
 Whatever the template, every `update-version.sh` shares this contract:
 
 1. **One argument**: the semver string with no `v` prefix (e.g. `0.0.6`,
-   `1.2.3-beta1`). Validate it matches
-   `^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$`.
+   `1.2.3-beta1`, `2.0.0-alpha-1`). Validate it matches
+   `^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$` (hyphens in the
+   pre-release identifier are legal per semver §9).
 2. **Idempotent**: re-running with the same version is a no-op (or
    replaces the existing value with the same value — diffs to nothing).
 3. **No network**: nothing here should hit the registry/PyPI/etc.
