@@ -14,9 +14,10 @@ place.
 | Path | Owns |
 |---|---|
 | `scripts/release/update-version.sh` | Mechanical bump of every source-tree version manifest (and its lockfile, if any) |
+| `scripts/release/` (the directory) | Also the conventional home for in-repo *templates* used by CI post-build jobs — e.g. a Homebrew formula template (`<name>.rb.tmpl`) consumed by `job-homebrew-tap.yml`. |
 | `RELEASING.md` at repo root | Human + LLM readable policy doc — what's special about this repo, what's optional vs required |
 | `.github/workflows/release.yml` | Tag-triggered build + publish + (where needed) bot-driven post-build asset updates |
-| `.github/workflows/sanity-check-app.yml` | Manually-triggered verification that the release-bot App is wired correctly. Optional but recommended. |
+| `.github/workflows/sanity-check-app.yml` | Manually-triggered verification that the release-bot App is wired into every repo this release touches (running repo + cross-repo push targets). Optional but recommended. |
 
 ## Required configuration
 

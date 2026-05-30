@@ -21,7 +21,8 @@ cross-repo refs to chase when debugging.
 | [`job-ci-gate.yml`](job-ci-gate.yml) | Polls `ci-success` on the tagged commit and refuses to publish unless it's green. Universal; copy as-is. |
 | [`job-create-release.yml`](job-create-release.yml) | Extracts this tag's CHANGELOG section and `gh release create`s. Universal. |
 | [`job-sparkle-appcast.yml`](job-sparkle-appcast.yml) | EdDSA-signs a built DMG, appends to the appcast XML, bot-pushes to main. Mac/Sparkle-specific. |
-| [`job-apt-dispatch.yml`](job-apt-dispatch.yml) | Fires a `repository_dispatch` at an apt-repo receiver after the .debs are uploaded. Generic dispatch pattern; receiver repo is a config knob. |
+| [`job-apt-dispatch.yml`](job-apt-dispatch.yml) | Fires a `repository_dispatch` at an apt-repo receiver after the .debs are uploaded. Generic dispatch pattern; receiver repo is a config knob. Uses a release-bot App token (PAT alternative documented inline). |
+| [`job-homebrew-tap.yml`](job-homebrew-tap.yml) | Renders an in-repo formula template with the released tarball sha256s and pushes `Formula/<name>.rb` to a tap repo. The GoReleaser-free `brews:` equivalent for hand-built binaries. Uses a release-bot App token. |
 
 ## Composition
 
@@ -67,6 +68,9 @@ the build interprets. Examples:
 - `<APT_RECEIVER_REPO>` → `charliek/apt-charliek`
 - `<APT_EVENT_TYPE>` → `publish`
 - `<APT_PACKAGE>` → `roost`
+- `<TAP_REPO>` → `charliek/homebrew-tap`
+- `<FORMULA_NAME>` → `strix`
+- `<FORMULA_TEMPLATE>` → `scripts/release/strix.rb.tmpl`
 
 When you emit a job into a repo, replace every angle-bracket placeholder
 with the repo's specific value. Don't leave placeholders in the
@@ -89,8 +93,9 @@ committed file — they don't expand at runtime.
 ## What the templates don't ship
 
 - Templates for ecosystems no consumer has migrated yet: PyPI publish,
-  crates.io publish, npm publish, Docker push, Homebrew tap update.
-  Add when the first consumer needs them.
+  crates.io publish, npm publish, Docker push.
+  Add when the first consumer needs them. (Homebrew tap update shipped with
+  strix — see [`job-homebrew-tap.yml`](job-homebrew-tap.yml).)
 - A reusable-workflows variant. We deliberately chose per-repo
   composition over `uses: <central>/.github/workflows/*` to keep each
   repo's release definition self-contained. If you want centralized

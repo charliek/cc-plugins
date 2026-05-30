@@ -71,7 +71,7 @@ Ask the user which of these the repo ships:
 
 - GitHub Release with binary assets (almost always yes)
 - Sparkle appcast (Mac auto-update via EdDSA-signed feed)
-- Homebrew tap (formula update in another repo) — `references/workflows/job-homebrew-tap.yml` not yet shipped
+- Homebrew tap (formula update in another repo) — `references/workflows/job-homebrew-tap.yml`
 - apt repo (repository_dispatch to a receiver repo)
 - Docker images (push to a registry) — `references/workflows/job-docker-push.yml` not yet shipped
 - Claude Code plugin distribution
@@ -82,11 +82,17 @@ Each YES activates a sub-walkthrough in phases 4–5.
 If the user is unsure, ask them to point at a similar repo or describe
 how releases work today. Don't guess.
 
-For pipelines whose templates don't yet ship in this plugin (Homebrew,
-Docker), tell the user up-front: *"this template hasn't shipped yet —
-we can either author it together as part of this setup (and contribute
-back to the plugin), or leave a stub in `release.yml` for now and
-revisit."*
+For pipelines whose templates don't yet ship in this plugin (Docker),
+tell the user up-front: *"this template hasn't shipped yet — we can
+either author it together as part of this setup (and contribute back to
+the plugin), or leave a stub in `release.yml` for now and revisit."*
+
+The Homebrew-tap and apt-dispatch templates use the release-bot App as a
+cross-repo credential (no per-pipeline PAT): the running repo mints a token
+scoped to the tap / receiver repo via `actions/create-github-app-token`. The App
+must be installed on those repos too. See `references/github-app.md`, "Cross-repo
+bot pushes". (The legacy `HOMEBREW_TAP_TOKEN` / `APT_DISPATCH_TOKEN` PATs are
+documented inline in each template as the alternative.)
 
 ## Phase 3 — GitHub App + secrets + branch protection
 
@@ -191,9 +197,25 @@ Show to the user. Write to `RELEASING.md` at the repo root. Don't commit.
 
 ## Phase 7 — sanity-check-app.yml
 
-Already dropped in Phase 3.4 if you walked the App walkthrough fresh.
-If Phase 3 was DONE/SKIPPED, ask the user if the file is in place. If
-not, drop it now.
+Drop in
+[`references/workflows/sanity-check-app.yml.template`](../references/workflows/sanity-check-app.yml.template)
+to `.github/workflows/sanity-check-app.yml`.
+
+The template ships with one verification block (the "self" check). For every
+cross-repo target chosen in Phase 2 (a Homebrew tap, an apt receiver, a
+Docker registry repo), add a second block that mints a token scoped to that
+repo and calls a read-only reach check. The template's commented-out
+"── 2. <CROSS_REPO_TARGET_NAME>" section is the pattern to duplicate.
+
+Substitute per-target placeholders at emit time:
+
+- `<TARGET_TOKEN_ID>` — a unique step id (e.g. `tap-token`, `apt-token`)
+- `<TARGET_OWNER>` — usually `${{ github.repository_owner }}` literal or the explicit owner
+- `<TARGET_REPO_NAME>` — repo name only, e.g. `homebrew-tap`, `apt-charliek`
+
+A failed reach check at sanity-check time means the App isn't installed on
+that target repo — fix that BEFORE the first real release runs, because the
+release will fail mid-flight if a target isn't reachable.
 
 Tell the user: *"To verify the App wiring, go to Actions → run
 `sanity-check-app` from the Actions UI. The output should print the

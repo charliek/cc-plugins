@@ -222,6 +222,45 @@ confirm:
 If any of those don't match, fix the App install or secrets before
 proceeding to the first real release.
 
+## Cross-repo bot pushes
+
+The App isn't limited to the repo whose workflow is running. One App, installed
+on several repos, is the single credential for a release's *cross-repo* side
+effects — e.g. strix's `release.yml` pushes a formula to `homebrew-tap` and fires
+a dispatch at `apt-charliek`, both from the App, with no PATs.
+
+In CI, mint a token scoped to the *target* repo (not the running repo):
+
+```yaml
+- uses: actions/create-github-app-token@v2
+  id: tap
+  with:
+    app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+    private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
+    owner: ${{ github.repository_owner }}
+    repositories: homebrew-tap        # repo name only, under the same owner
+# … then use ${{ steps.tap.outputs.token }} as GH_TOKEN / in the clone URL
+```
+
+Notes:
+
+- The App must be **installed on the target repo** (Phase 2). The
+  `RELEASE_BOT_APP_ID`/`_KEY` secrets live only on the *running* repo; the target
+  repos need no secrets.
+- The minted token is scoped to just that repo and expires in ~1h — a smaller
+  blast radius than a broad PAT.
+- A target repo needs a **ruleset bypass only if its default branch is protected**
+  with required checks. An unprotected `main` (typical for a tap or apt-index
+  repo) needs nothing beyond the install.
+- **Bot git identity** for commits: installation tokens can't call `gh api /user`
+  (403). Use the action's `app-slug` output plus the public `/users` endpoint:
+  ```bash
+  bot_id="$(gh api "/users/${SLUG}[bot]" --jq .id)"
+  git config user.name  "${SLUG}[bot]"
+  git config user.email "${bot_id}+${SLUG}[bot]@users.noreply.github.com"
+  ```
+  where `SLUG` is `${{ steps.<id>.outputs.app-slug }}`.
+
 ## Rollback
 
 If migrating the ruleset goes wrong:

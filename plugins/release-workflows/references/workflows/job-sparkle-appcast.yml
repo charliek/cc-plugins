@@ -42,11 +42,13 @@
 #                              dependency, the binary appears at
 #                              `mac/.build/artifacts/sparkle/Sparkle/bin/sign_update`.
 #                              Other setups will differ.
-#   <RELEASE_BOT_NAME>       — the release-bot App's bot user name,
-#                              e.g. `<account>-release-bot`
-#   <RELEASE_BOT_USER_ID>    — the bot's numeric user id. Look up once
-#                              with `gh api /users/<bot-name>%5Bbot%5D
-#                              --jq .id`
+#
+# Bot committer identity: read at runtime from the action's `app-slug` output
+# (and `/users/<slug>[bot]` for the numeric id). The earlier version of this
+# template required <RELEASE_BOT_NAME> and <RELEASE_BOT_USER_ID> substitution
+# placeholders; both are removed because installation tokens can't call
+# `gh api /user` (403), and baking the values at emit time breaks if the App
+# is ever renamed or replaced. See ../github-app.md, "Cross-repo bot pushes".
 #
 # Assumes the build job (e.g. `mac:`) has already:
 #   1. Built the DMG to a known runner path
@@ -126,6 +128,7 @@
       - name: Push signed appcast to main as release-bot
         env:
           GH_TOKEN: ${{ steps.bot-token.outputs.token }}
+          BOT_SLUG: ${{ steps.bot-token.outputs.app-slug }}
         run: |
           set -euo pipefail
           if git diff --quiet <APPCAST_PATH>; then
@@ -135,8 +138,12 @@
             echo "::notice::<APPCAST_PATH> unchanged for ${GITHUB_REF_NAME} — nothing to push."
             exit 0
           fi
-          git config user.name  "<RELEASE_BOT_NAME>[bot]"
-          git config user.email "<RELEASE_BOT_USER_ID>+<RELEASE_BOT_NAME>[bot]@users.noreply.github.com"
+          # Bot committer identity per the actions/create-github-app-token recipe:
+          # app-slug from the action output + the bot's numeric id from the public
+          # /users endpoint (installation tokens can't call /user).
+          bot_id="$(gh api "/users/${BOT_SLUG}[bot]" --jq '.id')"
+          git config user.name  "${BOT_SLUG}[bot]"
+          git config user.email "${bot_id}+${BOT_SLUG}[bot]@users.noreply.github.com"
           git add <APPCAST_PATH>
           # Assert only the appcast is staged. The bot must never sweep
           # other tracked files (e.g. a Cargo.lock that drifted during
