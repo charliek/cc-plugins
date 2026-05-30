@@ -19,6 +19,12 @@
       "category": "development"
     },
     {
+      "name": "release-workflows",
+      "description": "Convention-based release commands: cut a semver release using a repo's update-version.sh, and bootstrap new repos onto the convention with templates for update-version scripts, release.yml jobs, RELEASING.md, and a shared release-bot GitHub App",
+      "source": "./plugins/release-workflows",
+      "category": "development"
+    },
+    {
       "name": "deploy",
       "description": "Deploy commands for creating date-based releases that trigger Docker image builds and site deployments",
       "source": "./plugins/deploy",
