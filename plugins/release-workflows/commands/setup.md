@@ -131,6 +131,33 @@ For shipped templates, read the relevant file from
 out as repo-specific. Show the proposed script to the user. Write to
 `scripts/release/update-version.sh`. Mark executable. Don't commit.
 
+**Cargo-specific check**: if `Cargo.toml` uses the column-aligned style
+(`version       = "X.Y.Z"` with extra spaces before `=`, common in
+hand-formatted workspace manifests), the cargo-workspace template needs
+a one-line edit to preserve that style. Before showing the script, peek
+at `Cargo.toml`:
+
+```bash
+grep -E '^version' Cargo.toml | head -1
+```
+
+If the line has extra spaces between `version` and `=`, edit the sed
+replacement and the verification grep to match. See
+[`references/update-version/cargo-workspace.sh`](../references/update-version/cargo-workspace.sh)
+header's "COLUMN-ALIGNMENT" warning for the exact change. If you ship
+the template as-is on a column-aligned repo, the first release's diff
+will reflow the version line (functional but noisy).
+
+**Special case — Go modules**: Go binaries typically derive their
+version from a build-time ldflag (`-X .../version.Version={{.Version}}`
+in GoReleaser, or hand-rolled equivalent), NOT from a source-tree
+manifest. For Go repos with no in-source version constant,
+`update-version.sh` can be a near-no-op: simply
+`echo "Go module: version comes from the tag at build time; nothing to bump."`
+and exit 0. The convention still calls for the file to exist — but it
+just acknowledges that fact. Add a documenting header explaining the
+choice.
+
 For templates not yet shipped, write one following the contract in
 [`references/update-version/README.md`](../references/update-version/README.md):
 
@@ -201,11 +228,17 @@ Drop in
 [`references/workflows/sanity-check-app.yml.template`](../references/workflows/sanity-check-app.yml.template)
 to `.github/workflows/sanity-check-app.yml`.
 
-The template ships with one verification block (the "self" check). For every
-cross-repo target chosen in Phase 2 (a Homebrew tap, an apt receiver, a
-Docker registry repo), add a second block that mints a token scoped to that
-repo and calls a read-only reach check. The template's commented-out
-"── 2. <CROSS_REPO_TARGET_NAME>" section is the pattern to duplicate.
+**Default to multi-target when there are cross-repo pipelines.** For
+every cross-repo target chosen in Phase 2 (a Homebrew tap, an apt
+receiver, a Docker registry repo), uncomment and duplicate the
+template's commented-out "── 2. <CROSS_REPO_TARGET_NAME>" block. Emit
+one block per target. This is the single most valuable App-install
+verification — a missing install on the target repo causes the real
+release to fail mid-flight, and the sanity-check catches it with one
+manual `workflow_dispatch` click.
+
+A repo whose release.yml touches only its own `main` (Sparkle appcast
+push but no cross-repo dispatch) ships just the self block; that's fine.
 
 Substitute per-target placeholders at emit time:
 
@@ -219,8 +252,9 @@ release will fail mid-flight if a target isn't reachable.
 
 Tell the user: *"To verify the App wiring, go to Actions → run
 `sanity-check-app` from the Actions UI. The output should print the
-repo's name, an installation count of at least 1, and a token identity
-ending in `[bot]`."*
+repo's name, an installation count of at least 1, a token identity
+ending in `[bot]`, and (for each cross-repo target) the target repo's
+full name."*
 
 ## Phase 8 — First release dry-run
 

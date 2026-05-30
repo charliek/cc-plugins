@@ -260,6 +260,27 @@ Notes:
   git config user.email "${bot_id}+${SLUG}[bot]@users.noreply.github.com"
   ```
   where `SLUG` is `${{ steps.<id>.outputs.app-slug }}`.
+- **`git push` authentication: URL-embedded token, NOT
+  `git -c http.extraheader=…`.** This is a non-obvious gotcha. Setting
+  `http.https://github.com/.extraheader=AUTHORIZATION: bearer <token>` via
+  `git -c` is accepted by `git config` (you can verify with
+  `git config --get …`), but the HTTP layer ignores it on the outgoing
+  request and git still prompts:
+  ```
+  fatal: could not read Username for 'https://github.com'
+  ```
+  `actions/checkout` makes this pattern work by setting it via persistent
+  `git config` then unsetting; the ephemeral `-c` form does not. The proven
+  pattern for cross-repo (or same-repo bot) pushes is the token embedded in
+  the URL:
+  ```bash
+  TOKEN_URL="https://x-access-token:${GH_TOKEN}@github.com/${REPO_FULL}.git"
+  git push "${TOKEN_URL}" HEAD:main
+  git fetch "${TOKEN_URL}" main   # for retry loops; rebase against FETCH_HEAD
+  ```
+  The token stays in argv (not on-disk config). Reproduced in roost v0.0.6
+  and fixed in cc-plugins `db1fd31` / roost `f101aad` — every
+  template ships this shape now.
 
 ## Rollback
 

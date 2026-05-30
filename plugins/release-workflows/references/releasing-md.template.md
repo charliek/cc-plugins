@@ -86,6 +86,66 @@ Ruleset id: `<RULESET_ID>`. Inspect or edit at
 | Tag pushed, `version-check` fails on tag | Tagged a commit that didn't run `update-version.sh` | Re-bump locally + cut a fresh patch tag (don't force-update an existing tag) |
 {:: append pipeline-specific rows: appcast not on Pages → docs.yml didn't redeploy; apt-dispatch warned → APT_DISPATCH_TOKEN missing; etc. ::}
 
+## Break-glass recovery
+
+If a post-build job fails after the artifacts have already uploaded
+(common pattern: DMG/tarball is on the Release, but the appcast/formula
+push fails), you don't need to re-cut the release. Recover the missing
+step locally:
+
+{:: For each post-build step the repo runs, document the manual recovery.
+The most common is the Sparkle appcast — runbook below. Drop the section
+if the repo has no post-build push that could fail like this. ::}
+
+### Sparkle appcast — manual sign + publish
+
+If `mac` job's appcast step fails (the DMG IS on the Release):
+
+```bash
+# From a Mac with the EdDSA key in keychain (account: roost-release)
+W=$(mktemp -d); chmod 700 "$W"
+SIGN_UPDATE=<repo-local sign_update path, e.g. mac/.build/artifacts/sparkle/Sparkle/bin/sign_update>
+GENERATE_KEYS=<sibling path to generate_keys>
+
+# 1. Download the DMG that was uploaded by the build step
+gh release download v<X.Y.Z> --pattern "<DMG_PATTERN>" --dir "$W"
+
+# 2. Export the EdDSA key prompt-free (generate_keys is the creating
+#    tool, so it has ACL access; sign_update would prompt)
+"$GENERATE_KEYS" --account roost-release -x "$W/key" >/dev/null
+
+# 3. Sign
+"$SIGN_UPDATE" --ed-key-file "$W/key" "$W/<DMG_NAME>" > "$W/sign.txt"
+rm -f "$W/key"
+
+# 4. Append entry to docs/appcast.xml
+ROOST_VERSION=<X.Y.Z> ROOST_TAG=v<X.Y.Z> ROOST_SIGN_FILE="$W/sign.txt" \
+  python3 mac/scripts/update-appcast.py
+
+# 5. Commit + push (admin bypasses the ruleset's ci-success rule)
+git add docs/appcast.xml
+git commit -m "chore(appcast): publish v<X.Y.Z>"
+git push origin main
+
+# 6. docs.yml redeploys Pages with the new entry
+rm -rf "$W"
+```
+
+### Homebrew formula push
+
+{:: For repos that ship via Homebrew tap. Pattern: download tarballs
+from Release, hash, render formula template, clone tap + commit + push
+locally with the maintainer's own credentials. Document the path to the
+in-repo .rb.tmpl and the four (or whatever) per-arch SHA placeholders. ::}
+
+### apt-receiver re-dispatch
+
+{:: For repos that dispatch to an apt receiver. The receiver should
+self-heal on its next scheduled re-scan; if you need to force it, use
+`gh api repos/<receiver>/dispatches --method POST -f event_type=publish
+-F client_payload[package]=<pkg> -F client_payload[tag]=v<X.Y.Z>` with
+a personal token that has Contents:write on the receiver. ::}
+
 ## Adopting the convention (for new contributors)
 
 If you're new to this repo and need to understand the release pipeline,

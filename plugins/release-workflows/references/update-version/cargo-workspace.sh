@@ -6,13 +6,25 @@
 # member inherits via `version.workspace = true`). The script bumps that
 # field and regenerates `Cargo.lock` so the per-member entries match.
 #
-# The sed pattern allows variable whitespace around the `=`, so it
-# matches both vanilla `cargo new`/`cargo init` output (`version = "0.1.0"`)
-# and hand-aligned column-style layouts (`version       = "0.1.0"`). It
-# does NOT preserve the original column alignment — the replacement
-# uses a single space, which is the cargo-default. If your repo uses a
-# column-aligned style and you want to preserve it, change the
-# replacement's whitespace to match. (cargo doesn't care either way.)
+# ⚠ COLUMN-ALIGNMENT — IF YOUR CARGO.TOML USES THE COLUMN-ALIGNED STYLE,
+# CHANGE THE REPLACEMENT BEFORE THE FIRST RELEASE.
+#
+# This template's sed pattern matches both vanilla cargo's single-space
+# style (`version = "0.1.0"`) and hand-aligned column-style layouts
+# (`version       = "0.1.0"`). But the REPLACEMENT writes a single space
+# regardless. On a repo with column-aligned `[workspace.package]`,
+# adopting the template as-is reflows the version line on first release,
+# which makes the diff noisy and breaks the alignment with neighboring
+# lines (edition, rust-version, license, …).
+#
+# If your repo is column-aligned (roost-style, e.g. 7 spaces before `=`),
+# change the replacement to match — keep the same gap on both sides:
+#
+#     sed -i.bak -E 's/^version[[:space:]]*=[[:space:]]*"[^"]+"/version       = "'"$V"'"/' Cargo.toml
+#                                                                       ^^^^^^^ match your alignment
+#
+# Also update the verification grep below to match the aligned form.
+# (cargo itself doesn't care either way — this is a code-style question.)
 #
 # Also works for single-crate packages (no `[workspace.package]`, just
 # `[package].version`) without changes — the pattern matches both.

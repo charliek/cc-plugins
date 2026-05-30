@@ -100,3 +100,28 @@ committed file — they don't expand at runtime.
   composition over `uses: <central>/.github/workflows/*` to keep each
   repo's release definition self-contained. If you want centralized
   reusables later, that's a separate plugin.
+
+## Reference implementations (proven in production)
+
+Look at a working repo before adopting; it's faster than composing from
+the templates blind.
+
+| Repo | Shape | What to look at first |
+|---|---|---|
+| **strix** (`charliek/strix`) | Single-crate Rust binary, Mac+Linux tarballs + .debs, Homebrew tap, apt receiver | The whole `.github/workflows/release.yml` is the cleanest expression of the convention — single-step build matrix, App-based cross-repo for both tap and apt, multi-target sanity-check, in-repo `.rb.tmpl` formula. **Look here first.** |
+| **roost** (`charliek/roost`) | Rust workspace + Mac DMG with Sparkle appcast + Linux .debs + apt receiver | The Sparkle-appcast-after-build pattern (post-build job that signs the DMG, mutates `docs/appcast.xml`, bot-pushes to main). Has historical baggage (Mac signing/notarization gates, throwaway-key guard) that newer consumers don't need. |
+
+## Battle-test status per template
+
+The templates here are at different stages of real-world validation. When
+in doubt, copy the proven version inline rather than tweaking by hand.
+
+| Template | Live-tested in | Notes |
+|---|---|---|
+| `job-version-check.yml` | roost v0.0.6, strix releases | Stable. |
+| `job-ci-gate.yml` | roost v0.0.6 (with the `?check_name=` server-side filter) | Stable. |
+| `job-create-release.yml` | every release using the convention | Stable. |
+| `job-sparkle-appcast.yml` | roost v0.0.6 (after the URL-embedded-token fix) | The `http.extraheader` form was theoretically correct but broken in practice — git accepts the config but the HTTP layer ignores it. Current shape uses URL-embedded token. See [`../github-app.md`](../github-app.md) "git push authentication" gotcha. |
+| `job-apt-dispatch.yml` | strix releases, roost v0.0.6 | Stable. |
+| `job-homebrew-tap.yml` | strix releases | Stable. |
+| `sanity-check-app.yml.template` | strix, roost (multi-target shape) | Stable. |
