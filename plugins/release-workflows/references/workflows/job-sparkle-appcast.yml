@@ -156,21 +156,23 @@
           fi
           git commit -m "chore(appcast): publish ${GITHUB_REF_NAME}"
 
-          # Auth via in-memory header — keeps the App token out of
-          # .git/config on the runner disk. The same `-c http....`
-          # has to be on the fetch too, otherwise on a private repo
-          # the fetch leg of the retry loop authenticates anonymously
-          # and fails before push.
-          AUTH_HDR="http.https://github.com/.extraheader=AUTHORIZATION: bearer ${GH_TOKEN}"
-          push() { git -c "${AUTH_HDR}" push origin main; }
+          # URL-embedded token at push time. The http.extraheader pattern
+          # set via `git -c` is NOT honored for the outgoing HTTP request
+          # (we tried; git accepts the config but still prompts for
+          # credentials at request time — reproduced in roost v0.0.6).
+          # Embedding the token in the push URL works: stays in argv,
+          # never written to .git/config on disk, single-tenant runner so
+          # other processes don't see it.
+          TOKEN_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          push() { git push "${TOKEN_URL}" HEAD:main; }
           for attempt in 1 2 3; do
             if push; then
               echo "::notice::Appcast pushed for ${GITHUB_REF_NAME}."
               exit 0
             fi
             echo "::warning::push attempt ${attempt} failed; rebasing onto origin/main and retrying"
-            git -c "${AUTH_HDR}" fetch origin main
-            git rebase origin/main || {
+            git fetch "${TOKEN_URL}" main
+            git rebase FETCH_HEAD || {
               echo "::error::rebase conflict on <APPCAST_PATH> — concurrent appcast write? Re-run after investigating."
               exit 1
             }
