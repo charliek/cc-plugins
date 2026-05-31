@@ -43,6 +43,19 @@
 #                         prints just the version string to stdout. Examples
 #                         below.
 #
+#   For ANY JSON manifest (plugin.json, package.json, etc.), USE jq —
+#   never grep + sed. A grep + sed pattern that looks like
+#   `grep -oE '"version"…' | sed -E 's/.*"([^"]+)"$/\1/'` will silently
+#   misbehave the moment the manifest gains a nested `"version"` field
+#   (a future `dependencies` block, a `repositories.version` constraint,
+#   etc.) — grep returns multiple matches, sed transforms each, and the
+#   downstream comparison becomes a multi-line string that fails the
+#   equality check even when the top-level version is correct.
+#   jq anchors to the top-level field unambiguously and fails loudly on
+#   malformed JSON. jq is preinstalled on ubuntu-latest runners.
+#   This bit prox v0.1.2's first CodeRabbit review (W1/W2) and was hardened
+#   in codelens PR #47.
+#
 # Examples of <VERSION_EXTRACT>:
 #
 #   Cargo.toml (workspace):
@@ -53,8 +66,11 @@
 #     grep -E '^version[[:space:]]*=' pyproject.toml | head -1 \
 #       | sed -E 's/^version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/'
 #
-#   plugin.json:
+#   plugin.json (RECOMMENDED — use jq, NOT grep+sed):
 #     jq -r '.version' .claude-plugin/plugin.json
+#
+#   package.json (RECOMMENDED — use jq, NOT grep+sed):
+#     jq -r '.version' package.json
 #
 #   build.gradle:
 #     grep -E '^version[[:space:]]*=' build.gradle | head -1 \

@@ -59,17 +59,35 @@ Whatever the template, every `update-version.sh` shares this contract:
    replaces the existing value with the same value — diffs to nothing).
 3. **No network**: nothing here should hit the registry/PyPI/etc.
    Lockfile regeneration must use `--offline` or equivalent.
-4. **Verifies its own work**: after bumping, grep the result to confirm
-   the new version made it into the file. Fail loud if not. This is
-   non-negotiable — sed/jq/regex-based bumpers silently no-op when the
-   manifest's shape doesn't match the pattern (missing field, different
-   key style, reformatted). Reproduced in prox v0.1.2: removing the
-   `"version"` field from `plugin.json` made the underlying
+4. **Verifies its own work**: after bumping, read the result back and
+   confirm the new version made it into the file. Fail loud if not.
+   This is non-negotiable — sed/jq/regex-based bumpers silently no-op
+   when the manifest's shape doesn't match the pattern (missing field,
+   different key style, reformatted). Reproduced in prox v0.1.2:
+   removing the `"version"` field from `plugin.json` made the underlying
    `scripts/set-version.sh` exit 0 with the file unchanged; the wrapper
-   relayed the success, and only a grep-back at the wrapper level caught
-   the silent failure. Every template must close this gap. If you
-   delegate to an existing in-repo bumper that doesn't verify, **the
-   wrapper does the verification**.
+   relayed the success, and only an explicit read-back at the wrapper
+   level caught the silent failure. Every template must close this gap.
+   If you delegate to an existing in-repo bumper that doesn't verify,
+   **the wrapper does the verification**.
+
+   **For JSON manifests** (plugin.json, package.json, etc.), use `jq`,
+   not grep+sed:
+
+   ```bash
+   [ "$(jq -r '.version' "${PLUGIN_JSON}")" = "${V}" ] || \
+     { echo "error: plugin.json .version did not bump to ${V}" >&2; exit 1; }
+   ```
+
+   Why: grep+sed against `"version"[^"]*"[^"]+"` matches ANY occurrence
+   of `"version"` in the file. If the JSON ever gains a nested
+   `"version"` field (a `dependencies` block, a tool config that uses
+   the same key, etc.), the verify accepts a wrong value and the
+   delegated sed silently clobbers all of them. jq anchors to the
+   top-level `.version` unambiguously and fails loudly on malformed
+   JSON. jq is preinstalled on ubuntu-latest runners and ships with
+   Homebrew + apt out of the box. Hardened in codelens v0.0.5 and prox
+   #23 after the codelens PR review caught this class of risk.
 5. **Quiet on success**: print one line per file mutated, nothing else.
    `set -euo pipefail` so silent failures don't reach the release skill.
 6. **Doesn't `git add`**: leaves the working tree dirty. The release
