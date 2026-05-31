@@ -60,7 +60,7 @@ this section with the policy: what gets bumped to what, in which step.
 
 | Secret | Purpose | Required? |
 |---|---|---|
-| `RELEASE_BOT_APP_ID` | `<RELEASE_BOT_NAME>` GitHub App ID | required |
+| `RELEASE_BOT_CLIENT_ID` | `<RELEASE_BOT_NAME>` GitHub App Client ID | required |
 | `RELEASE_BOT_APP_KEY` | App private key (.pem) | required |
 {:: list any pipeline-specific secrets: SPARKLE_ED_PRIVATE_KEY (Sparkle), APT_DISPATCH_TOKEN (apt-dispatch), HOMEBREW_TAP_TOKEN (homebrew), etc. with a note on optional vs required and what happens if unset. ::}
 

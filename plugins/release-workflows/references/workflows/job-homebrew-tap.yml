@@ -42,7 +42,7 @@
 # scoped to the source repo (the github.token of this workflow), kept separate
 # from the tap token.
 #
-# If RELEASE_BOT_APP_ID isn't set, the job warns and skips rather than failing the
+# If RELEASE_BOT_CLIENT_ID isn't set, the job warns and skips rather than failing the
 # release.
 
   homebrew:
@@ -56,10 +56,10 @@
       - name: Skip if the release-bot App is not configured
         id: guard
         env:
-          APP_ID: ${{ secrets.RELEASE_BOT_APP_ID }}
+          CLIENT_ID: ${{ secrets.RELEASE_BOT_CLIENT_ID }}
         run: |
-          if [ -z "${APP_ID}" ]; then
-            echo "::warning::RELEASE_BOT_APP_ID not set — skipping Homebrew formula update."
+          if [ -z "${CLIENT_ID}" ]; then
+            echo "::warning::RELEASE_BOT_CLIENT_ID not set — skipping Homebrew formula update."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
@@ -70,7 +70,7 @@
         id: tap
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          client-id: ${{ secrets.RELEASE_BOT_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: <TAP_REPO_NAME>   # repo name only, e.g. homebrew-tap

@@ -14,7 +14,7 @@
 # Legacy alternative: a fine-grained `APT_DISPATCH_TOKEN` PAT with Contents:write
 # on the receiver. To use it, drop the "Mint" step and set
 # `GH_TOKEN: ${{ secrets.APT_DISPATCH_TOKEN }}` on the dispatch step (and gate on
-# `secrets.APT_DISPATCH_TOKEN != ''` instead of RELEASE_BOT_APP_ID). prox/roost
+# `secrets.APT_DISPATCH_TOKEN != ''` instead of RELEASE_BOT_CLIENT_ID). prox/roost
 # still use this form pending migration to the App.
 #
 # === Paste-ready fragment ===
@@ -30,7 +30,7 @@
 #   <APT_EVENT_TYPE>         — the event_type the receiver listens for, e.g. `publish`
 #   <APT_PACKAGE>            — your package's name as the receiver knows it
 #
-# If RELEASE_BOT_APP_ID isn't set, or the tag is a prerelease, this job downgrades
+# If RELEASE_BOT_CLIENT_ID isn't set, or the tag is a prerelease, this job downgrades
 # to a notice rather than failing the release. The receiver should self-heal on
 # its next scheduled re-scan if it's set up that way.
 
@@ -41,7 +41,7 @@
       - name: Decide whether to dispatch
         id: guard
         env:
-          APP_ID: ${{ secrets.RELEASE_BOT_APP_ID }}
+          CLIENT_ID: ${{ secrets.RELEASE_BOT_CLIENT_ID }}
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
@@ -52,8 +52,8 @@
               exit 0
               ;;
           esac
-          if [ -z "${APP_ID}" ]; then
-            echo "::warning::RELEASE_BOT_APP_ID not set — skipping dispatch. <APT_RECEIVER_REPO> can self-heal on its next scheduled re-scan."
+          if [ -z "${CLIENT_ID}" ]; then
+            echo "::warning::RELEASE_BOT_CLIENT_ID not set — skipping dispatch. <APT_RECEIVER_REPO> can self-heal on its next scheduled re-scan."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
@@ -64,7 +64,7 @@
         id: apt
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          client-id: ${{ secrets.RELEASE_BOT_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: <APT_RECEIVER_NAME>

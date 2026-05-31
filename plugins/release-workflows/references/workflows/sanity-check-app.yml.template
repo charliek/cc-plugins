@@ -49,7 +49,7 @@ jobs:
       - id: self-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id:      ${{ secrets.RELEASE_BOT_APP_ID }}
+          client-id:      ${{ secrets.RELEASE_BOT_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
 
       - name: Token sees this repo + bot identity
@@ -92,7 +92,7 @@ jobs:
       # - id: <TARGET_TOKEN_ID>             # e.g. tap-token, apt-token
       #   uses: actions/create-github-app-token@v3
       #   with:
-      #     app-id:      ${{ secrets.RELEASE_BOT_APP_ID }}
+      #     client-id:      ${{ secrets.RELEASE_BOT_CLIENT_ID }}
       #     private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
       #     owner:        <TARGET_OWNER>           # the repo's owner
       #     repositories: <TARGET_REPO_NAME>       # repo name only, e.g. homebrew-tap

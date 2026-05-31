@@ -57,11 +57,18 @@ If you already have a release-bot App for your account, skip to Phase 2.
 
 Click Create.
 
-On the next page:
+On the next page, note **two** identifiers — they're different fields
+and you'll need both:
 
-1. **Note the App ID** (top, under "About"). You'll need it for one
-   secret per repo. It's a 6–7 digit integer.
-2. **Generate a private key** (bottom of the page, "Private keys" →
+1. **Client ID** (top, under "About"). Alphanumeric, looks like
+   `Iv23ctXXXXXX` or `lv1.XXXXXXXX`. This is the *workflow auth* input
+   for `actions/create-github-app-token@v3` (the `client-id:` field
+   superseded `app-id:` in v3.1.0; `app-id` still works but is
+   deprecated with a warning).
+2. **App ID** (also under "About"). A 6–7 digit integer (e.g.
+   `3902108`). Used for ruleset `bypass_actors` entries as the
+   `actor_id` of the App (Integration type). Phase 4 below uses it.
+3. **Generate a private key** (bottom of the page, "Private keys" →
    "Generate a private key"). Downloads a `.pem` file. GitHub never
    shows it again — copy it into a password manager. The local copy is
    needed once per repo for the secret upload below; delete after.
@@ -82,20 +89,23 @@ convention.
 ## Phase 3 — Set the secrets on each repo
 
 ```bash
-APP_ID=<your-app-id>                       # the integer from Phase 1
+CLIENT_ID=<your-client-id>                 # the alphanumeric ID from Phase 1
 PEM=~/Downloads/<your-key>.private-key.pem
 REPO=<owner>/<repo>
 
-gh secret set RELEASE_BOT_APP_ID  -R "$REPO" -b "$APP_ID"
-gh secret set RELEASE_BOT_APP_KEY -R "$REPO" < "$PEM"
+gh secret set RELEASE_BOT_CLIENT_ID -R "$REPO" -b "$CLIENT_ID"
+gh secret set RELEASE_BOT_APP_KEY   -R "$REPO" < "$PEM"
 
 # Verify
 gh secret list -R "$REPO" | grep RELEASE_BOT_
 ```
 
 Both secret names are the convention; the workflow templates expect
-exactly these. Once the secrets are set on every repo, move the `.pem`
-into your password manager and delete it from `~/Downloads/`.
+exactly these. The integer App ID stays on the App settings page — the
+workflows don't need it as a secret (only ruleset bypass entries
+reference it, and you paste it into the JSON template in Phase 4).
+Once the secrets are set on every repo, move the `.pem` into your
+password manager and delete it from `~/Downloads/`.
 
 ## Phase 4 — Migrate `main` to a ruleset
 
@@ -264,7 +274,7 @@ In CI, mint a token scoped to the *target* repo (not the running repo):
 - uses: actions/create-github-app-token@v3
   id: tap
   with:
-    app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+    client-id: ${{ secrets.RELEASE_BOT_CLIENT_ID }}
     private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
     owner: ${{ github.repository_owner }}
     repositories: homebrew-tap        # repo name only, under the same owner
@@ -274,7 +284,7 @@ In CI, mint a token scoped to the *target* repo (not the running repo):
 Notes:
 
 - The App must be **installed on the target repo** (Phase 2). The
-  `RELEASE_BOT_APP_ID`/`_KEY` secrets live only on the *running* repo; the target
+  `RELEASE_BOT_CLIENT_ID`/`_KEY` secrets live only on the *running* repo; the target
   repos need no secrets.
 - The minted token is scoped to just that repo and expires in ~1h — a smaller
   blast radius than a broad PAT.
@@ -338,7 +348,7 @@ gh api -X DELETE "/repos/${REPO}/rulesets/<id-from-previous-line>"
 |---|---|---|
 | `git push origin main` → `Required status check "ci-success" is expected` | Admin role missing from ruleset bypass | Update the ruleset's `bypass_actors` (see Step 4.4 below) to include `{ actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "always" }` |
 | `git push origin main` from CI bot → same error | App missing from ruleset bypass | Update the ruleset's `bypass_actors` (see Step 4.4 below) to include `{ actor_id: <APP_ID>, actor_type: "Integration", bypass_mode: "always" }` |
-| `actions/create-github-app-token@v3` → `Bad credentials` | `RELEASE_BOT_APP_ID` or `RELEASE_BOT_APP_KEY` not set, or `.pem` corrupted | Re-upload the `.pem` from the password manager |
+| `actions/create-github-app-token@v3` → `Bad credentials` | `RELEASE_BOT_CLIENT_ID` or `RELEASE_BOT_APP_KEY` not set, or `.pem` corrupted | Re-upload the `.pem` from the password manager |
 | Bot push succeeds but workflow says "Resource not accessible by integration" | App is installed but doesn't have the right permission for the API call being made | Edit the App's permissions, then re-accept the installation |
 | CI says `App is installed but token has no access to <repo>` | App install missed this repo | Re-run Phase 2 and add the repo |
 

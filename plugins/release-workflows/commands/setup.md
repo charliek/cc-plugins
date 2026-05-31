@@ -104,7 +104,7 @@ and confirming results.
 |---|---|
 | 3.1 — App exists? | Ask: "Have you created a release-bot App on your GitHub account?" If no, walk through `github-app.md` Phase 1 with them. If yes, confirm the App name and ID. |
 | 3.2 — App installed on this repo? | `gh api /installation/repositories` from a token that owns the App, or `gh secret list -R <repo> \| grep RELEASE_BOT_` for indirect signal. If not installed, walk through Phase 2 of `github-app.md`. |
-| 3.3 — Secrets set? | `gh secret list -R <repo>` must show `RELEASE_BOT_APP_ID` and `RELEASE_BOT_APP_KEY`. If not, walk through Phase 3 of `github-app.md` together — the user runs the commands; don't run `gh secret set` for them without explicit confirmation. |
+| 3.3 — Secrets set? | `gh secret list -R <repo>` must show `RELEASE_BOT_CLIENT_ID` and `RELEASE_BOT_APP_KEY`. If not, walk through Phase 3 of `github-app.md` together — the user runs the commands; don't run `gh secret set` for them without explicit confirmation. |
 | 3.4 — Branch protection migrated to a ruleset? | Inspect `gh api /repos/<r>/branches/main/protection` (classic) and `gh api /repos/<r>/rulesets`. If still on classic, walk through Phase 4 of `github-app.md`. Show the JSON before posting. **The maintainer runs the `gh api` calls themselves**, not the skill. |
 
 When you're done, drop in
@@ -328,7 +328,7 @@ ready to review and commit:
 
 And these one-time configurations done on GitHub:
 
-- `RELEASE_BOT_APP_ID` + `RELEASE_BOT_APP_KEY` secrets
+- `RELEASE_BOT_CLIENT_ID` + `RELEASE_BOT_APP_KEY` secrets
 - App installed on the repo
 - `main` ruleset with App + admin in `bypass_actors`
 - Classic protection deleted (replaced by the ruleset)

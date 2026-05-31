@@ -74,7 +74,7 @@
         id: bot-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id:      ${{ secrets.RELEASE_BOT_APP_ID }}
+          client-id:      ${{ secrets.RELEASE_BOT_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
           # Defense-in-depth: explicit permission floor on the minted
           # token so a future widening of the App's installation perms
