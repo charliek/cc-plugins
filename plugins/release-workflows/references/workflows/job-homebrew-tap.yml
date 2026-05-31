@@ -92,12 +92,27 @@
 
           # Download the per-arch tarballs (public repo → plain HTTPS) and hash
           # them into @SHA_<TRIPLE>@ sed expressions.
+          #
+          # Retry on 404: the public `releases/download/<tag>/...` URL has a
+          # short propagation lag after a release is published (we typically
+          # see 5-20s on first hit). The finalize-release job has flipped the
+          # release out of draft by this point, but the CDN may still serve
+          # 404 for a few seconds. Retry with backoff before giving up.
           dl="$(mktemp -d)"
           sed_args=( -e "s|@VERSION@|${ver}|g" -e "s|@TAG@|${tag}|g" )
           for triple in <TARBALL_TRIPLES>; do
-            curl -fsSL -o "${dl}/<FORMULA_NAME>_${triple}.tar.gz" \
-              "https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/<FORMULA_NAME>_${triple}.tar.gz"
-            sha="$(shasum -a 256 "${dl}/<FORMULA_NAME>_${triple}.tar.gz" | awk '{print $1}')"
+            url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/<FORMULA_NAME>_${triple}.tar.gz"
+            out="${dl}/<FORMULA_NAME>_${triple}.tar.gz"
+            for attempt in 1 2 3 4 5; do
+              if curl -fsSL -o "${out}" "${url}"; then break; fi
+              if [ "${attempt}" = 5 ]; then
+                echo "::error::Failed to download ${url} after 5 attempts (last status from curl above)."
+                exit 1
+              fi
+              echo "::warning::Download attempt ${attempt} failed for ${url}; retrying in 10s."
+              sleep 10
+            done
+            sha="$(shasum -a 256 "${out}" | awk '{print $1}')"
             key="$(echo "${triple}" | tr '[:lower:]' '[:upper:]')"
             sed_args+=( -e "s|@SHA_${key}@|${sha}|g" )
           done

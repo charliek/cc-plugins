@@ -71,7 +71,7 @@ Ask the user which of these the repo ships:
 
 - GitHub Release with binary assets (almost always yes)
 - Sparkle appcast (Mac auto-update via EdDSA-signed feed)
-- Homebrew tap (formula update in another repo) — `references/workflows/job-homebrew-tap.yml`
+- Homebrew tap (formula update in another repo) — `references/workflows/job-homebrew-tap.yml` (requires `references/workflows/job-finalize-release.yml` between build and homebrew — see that file's header)
 - apt repo (repository_dispatch to a receiver repo)
 - Docker images (push to a registry) — `references/workflows/job-docker-push.yml` not yet shipped
 - Claude Code plugin distribution

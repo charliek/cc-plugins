@@ -104,6 +104,29 @@ If a build identity beyond "last released" is needed (e.g., a CLI's
 derive it at build time from `git describe --tags --dirty` rather than
 snapshotting the source tree.
 
+## Why the workflow has a `finalize-release` job
+
+`gh release create <tag> …` is supposed to create a non-draft release tagged at
+`<tag>` — and usually does. Occasionally, when the just-pushed tag isn't yet
+visible to the Release API at the moment the `create-release` job runs, gh
+stores the release as a tag-less draft instead, with a `releases/tag/untagged-<hash>`
+URL slug. Asset uploads in that state attach to the draft, and the public
+`releases/download/<tag>/<asset>` URL serves 404 — even though
+`gh release view <tag>` shows the assets present. Any post-build job that curls
+the public asset URLs (homebrew tap, etc.) then fails.
+
+The `finalize-release` job in `references/workflows/job-finalize-release.yml`
+runs after every build/upload job and explicitly flips the release out of
+draft (`gh release edit <tag> --draft=false --latest`). Subsequent publish
+jobs (homebrew, sparkle, apt-dispatch) should `needs: finalize-release`
+rather than `needs: build`. The flip is idempotent — no harm if the release
+was already published.
+
+Even with `finalize-release` in place, the public download URL has a short
+CDN propagation delay (typically 5-20s) after a release is first published.
+`job-homebrew-tap.yml` retries with backoff to cover that window; other
+post-publish jobs that download assets from the public URL should do the same.
+
 ## The release flow end to end
 
 1. **LLM (`/release-workflows:release vX.Y.Z`)** — local:
@@ -123,8 +146,10 @@ snapshotting the source tree.
      creates the GitHub Release
    - Repo-specific build jobs produce artifacts and upload them to the
      Release
+   - `finalize-release` flips the release out of draft (if any) and marks
+     it as `latest`, so the public asset URLs are reachable
    - Post-build jobs publish derived assets (sign Sparkle appcast and
-     bot-push; dispatch apt receivers; etc.)
+     bot-push; dispatch apt receivers; etc.) — these `needs: finalize-release`
 
 The maintainer runs step 1; everything else is automated.
 
