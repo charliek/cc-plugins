@@ -261,7 +261,7 @@ a dispatch at `apt-charliek`, both from the App, with no PATs.
 In CI, mint a token scoped to the *target* repo (not the running repo):
 
 ```yaml
-- uses: actions/create-github-app-token@v2
+- uses: actions/create-github-app-token@v3
   id: tap
   with:
     app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
@@ -338,7 +338,7 @@ gh api -X DELETE "/repos/${REPO}/rulesets/<id-from-previous-line>"
 |---|---|---|
 | `git push origin main` → `Required status check "ci-success" is expected` | Admin role missing from ruleset bypass | Update the ruleset's `bypass_actors` (see Step 4.4 below) to include `{ actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "always" }` |
 | `git push origin main` from CI bot → same error | App missing from ruleset bypass | Update the ruleset's `bypass_actors` (see Step 4.4 below) to include `{ actor_id: <APP_ID>, actor_type: "Integration", bypass_mode: "always" }` |
-| `actions/create-github-app-token@v2` → `Bad credentials` | `RELEASE_BOT_APP_ID` or `RELEASE_BOT_APP_KEY` not set, or `.pem` corrupted | Re-upload the `.pem` from the password manager |
+| `actions/create-github-app-token@v3` → `Bad credentials` | `RELEASE_BOT_APP_ID` or `RELEASE_BOT_APP_KEY` not set, or `.pem` corrupted | Re-upload the `.pem` from the password manager |
 | Bot push succeeds but workflow says "Resource not accessible by integration" | App is installed but doesn't have the right permission for the API call being made | Edit the App's permissions, then re-accept the installation |
 | CI says `App is installed but token has no access to <repo>` | App install missed this repo | Re-run Phase 2 and add the repo |
 

@@ -47,7 +47,7 @@ jobs:
     steps:
       # ── 1. self ──
       - id: self-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id:      ${{ secrets.RELEASE_BOT_APP_ID }}
           private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
@@ -90,7 +90,7 @@ jobs:
       # cross-repo targets.
       #
       # - id: <TARGET_TOKEN_ID>             # e.g. tap-token, apt-token
-      #   uses: actions/create-github-app-token@v2
+      #   uses: actions/create-github-app-token@v3
       #   with:
       #     app-id:      ${{ secrets.RELEASE_BOT_APP_ID }}
       #     private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
