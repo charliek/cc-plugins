@@ -23,7 +23,7 @@ place.
 
 | Item | Where set |
 |---|---|
-| `RELEASE_BOT_APP_ID` secret | Repo settings → Secrets and variables → Actions |
+| `RELEASE_BOT_CLIENT_ID` secret | Repo settings → Secrets and variables → Actions |
 | `RELEASE_BOT_APP_KEY` secret | Same. Contents are the App's `.pem` private key |
 | Branch protection ruleset on `main` | Repo settings → Rules → Rulesets |
 
@@ -131,7 +131,7 @@ The maintainer runs step 1; everything else is automated.
 ## Secret naming — generic, not account-specific
 
 All secrets this plugin references are named generically so the
-templates work for anyone, not just one account. `RELEASE_BOT_APP_ID`
+templates work for anyone, not just one account. `RELEASE_BOT_CLIENT_ID`
 and `RELEASE_BOT_APP_KEY` refer to *your* release-bot App, whichever
 one you set up. The App itself isn't part of this plugin; you create it
 once per account and install it on each repo that opts in (see

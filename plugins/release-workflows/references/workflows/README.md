@@ -78,7 +78,7 @@ committed file — they don't expand at runtime.
 
 ## What the templates assume
 
-- The repo has `RELEASE_BOT_APP_ID` + `RELEASE_BOT_APP_KEY` secrets (see
+- The repo has `RELEASE_BOT_CLIENT_ID` + `RELEASE_BOT_APP_KEY` secrets (see
   [`../github-app.md`](../github-app.md)).
 - `main` is protected by a ruleset that bypasses both the App and the
   admin role.
