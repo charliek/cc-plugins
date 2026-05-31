@@ -6,6 +6,29 @@
 # it catches the case where the tag was created against the wrong
 # commit (e.g., a developer bypassed the skill).
 #
+# Job-shape vs inline-step shape
+# ───────────────────────────────
+# This template emits a SEPARATE JOB that runs as a prerequisite (the
+# `needs: [version-check, …]` pattern) so the rest of the pipeline can
+# fan out from a known-correct manifest. Use this shape when the build
+# is multi-job (e.g. matrix builds, Mac+Linux split, separate
+# appcast/dispatch jobs after build).
+#
+# If your release.yaml is a SINGLE JOB (e.g. one GoReleaser job that
+# does everything), inline the check as a step inside that job instead.
+# Prox's release.yaml does this; the inline form is:
+#
+#     - name: Verify <MANIFEST_PATH> matches tag
+#       run: |
+#         set -euo pipefail
+#         expect="${GITHUB_REF_NAME#v}"
+#         got="$(<VERSION_EXTRACT>)"
+#         [ "${got}" = "${expect}" ] || { echo "::error::<MANIFEST_PATH>=${got} != tag=${expect}"; exit 1; }
+#
+# Both shapes do the same work; the job-shape is slightly cleaner for
+# the multi-job case (fails fast before the matrix expands), the inline
+# shape is slightly cleaner for the single-job case (no needs: wiring).
+#
 # === Paste-ready fragment ===
 # This file's YAML is already indented by 2 spaces so it sits cleanly
 # under `jobs:` in release.yml. Copy from the first non-comment line to

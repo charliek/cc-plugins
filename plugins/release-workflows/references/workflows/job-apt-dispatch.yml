@@ -68,6 +68,10 @@
           private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: <APT_RECEIVER_NAME>
+          # Defense-in-depth: POST /repos/.../dispatches needs contents:write;
+          # pinning the floor avoids silent widening if the App's install
+          # perms are ever expanded.
+          permission-contents: write
 
       - name: Dispatch <APT_RECEIVER_REPO> publish
         if: steps.guard.outputs.skip == 'false'

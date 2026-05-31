@@ -62,7 +62,17 @@ jobs:
           gh api "/repos/${GITHUB_REPOSITORY}" --jq '.full_name'
           echo "::endgroup::"
 
-          echo "::group::Installation repository count (must be >=1)"
+          echo "::group::Installation repository count (informational)"
+          # IMPORTANT — this is the count of repos in THIS repo's
+          # installation, not the App's total install footprint. The
+          # typical pattern is per-repo selective installs: each repo
+          # has its own installation that sees only itself (count=1),
+          # so cross-repo minting reaches OTHER installations through
+          # the App's private key via owner+repositories inputs (see
+          # github-app.md "Per-repo selective installs vs single-
+          # installation"). Don't assert count>=N here — it's mostly
+          # informational. The cross-repo blocks below are the real
+          # verification that the App can reach each target.
           gh api /installation/repositories --jq '.total_count'
           echo "::endgroup::"
 
@@ -86,6 +96,11 @@ jobs:
       #     private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
       #     owner:        <TARGET_OWNER>           # the repo's owner
       #     repositories: <TARGET_REPO_NAME>       # repo name only, e.g. homebrew-tap
+      #     # Defense-in-depth: pin the permission floor on cross-repo blocks
+      #     # so they match what the real release.yaml's mint steps request.
+      #     # (Do NOT add this to the self block above — its broader scope
+      #     # is needed for /installation/repositories.)
+      #     permission-contents: write
       #
       # - name: Token can reach <TARGET_OWNER>/<TARGET_REPO_NAME>
       #   env:

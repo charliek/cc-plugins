@@ -74,6 +74,10 @@
           private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: <TAP_REPO_NAME>   # repo name only, e.g. homebrew-tap
+          # Defense-in-depth: pushing the formula needs contents:write;
+          # pinning the floor avoids silent widening if the App's install
+          # perms are ever expanded.
+          permission-contents: write
 
       - name: Render and push the formula
         if: steps.guard.outputs.skip == 'false'

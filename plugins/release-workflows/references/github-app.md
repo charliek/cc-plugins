@@ -222,6 +222,35 @@ confirm:
 If any of those don't match, fix the App install or secrets before
 proceeding to the first real release.
 
+## Per-repo selective installs vs single-installation
+
+How you install the App per repo affects what `gh api /installation/repositories`
+returns inside a workflow — and it's a non-obvious gotcha that traps anyone
+trying to write a "verify the App can reach N target repos" assertion in
+sanity-check.
+
+There are two install patterns:
+
+| Pattern | What `/installation/repositories` returns from each repo |
+|---|---|
+| **Per-repo selective** (typical for personal accounts) — install the App separately on each repo, picking "Only select repositories" each time, choosing one repo per install | Each repo's installation sees **only itself** (count = 1). Cross-repo minting via `owner` + `repositories` reaches OTHER installations through the App's private key, NOT via this installation's repo list. |
+| **Single installation, all selected repos** — install the App once with "Only select repositories" + a multi-select including all target repos | All repos in that installation see the same count (count = N for the multi-selected list). |
+
+Charlie's setup uses **per-repo selective** — installing on prox, strix, roost,
+homebrew-tap, apt-charliek, etc. as separate App installations, each scoped to
+one repo.
+
+**Do not write count-based assertions in `sanity-check-app.yml`** like
+"assert `total_count >= 3`". On the per-repo selective pattern, count is always
+1 from any single repo's perspective, regardless of how many target repos the
+App can reach via cross-repo minting. The per-target reach checks (mint a
+scoped token + `gh api /repos/<target>` GET) are the correct verification.
+
+This bit prox during initial sanity-check: a "≥3 expected" assertion fired
+because prox's installation legitimately has count=1, then the per-target
+reach checks didn't even get to run. Removed in prox `4910290` and in the
+template's count comment here.
+
 ## Cross-repo bot pushes
 
 The App isn't limited to the repo whose workflow is running. One App, installed

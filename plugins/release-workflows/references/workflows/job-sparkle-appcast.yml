@@ -76,6 +76,11 @@
         with:
           app-id:      ${{ secrets.RELEASE_BOT_APP_ID }}
           private-key: ${{ secrets.RELEASE_BOT_APP_KEY }}
+          # Defense-in-depth: explicit permission floor on the minted
+          # token so a future widening of the App's installation perms
+          # doesn't silently broaden what this token can do. The
+          # appcast push (the only write the bot does) needs contents:write.
+          permission-contents: write
 
       # The build job uploaded the DMG to the Release; pull it back down.
       # This avoids coupling the appcast job to the build job's runner

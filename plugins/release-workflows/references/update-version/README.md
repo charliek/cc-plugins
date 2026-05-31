@@ -60,7 +60,16 @@ Whatever the template, every `update-version.sh` shares this contract:
 3. **No network**: nothing here should hit the registry/PyPI/etc.
    Lockfile regeneration must use `--offline` or equivalent.
 4. **Verifies its own work**: after bumping, grep the result to confirm
-   the new version made it into the file. Fail loud if not.
+   the new version made it into the file. Fail loud if not. This is
+   non-negotiable — sed/jq/regex-based bumpers silently no-op when the
+   manifest's shape doesn't match the pattern (missing field, different
+   key style, reformatted). Reproduced in prox v0.1.2: removing the
+   `"version"` field from `plugin.json` made the underlying
+   `scripts/set-version.sh` exit 0 with the file unchanged; the wrapper
+   relayed the success, and only a grep-back at the wrapper level caught
+   the silent failure. Every template must close this gap. If you
+   delegate to an existing in-repo bumper that doesn't verify, **the
+   wrapper does the verification**.
 5. **Quiet on success**: print one line per file mutated, nothing else.
    `set -euo pipefail` so silent failures don't reach the release skill.
 6. **Doesn't `git add`**: leaves the working tree dirty. The release
