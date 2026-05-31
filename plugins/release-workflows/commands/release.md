@@ -289,7 +289,7 @@ concern.
 | Latest CI on HEAD is `failure` | Something is broken | Fix it, push, re-check |
 | Not on `main` | Working on a feature branch | Switch branches; or maybe you meant to merge a PR first |
 | Uncommitted changes | Work in progress | Commit or stash; tell the user before either |
-| Tag already exists | Released before; or aborted release that pushed the tag but not main | Pick a fresh patch tag (don't force-update an existing one) |
+| Tag already exists | Released before; or aborted release that pushed the tag but not main | Pick a fresh patch tag (don't force-update an existing one). If you must rewrite a just-pushed tag — e.g. CI revealed a packaging bug and no artifact has shipped externally — cancel any in-flight workflow runs first, delete the tag with `git push origin :refs/tags/vX.Y.Z`, reset main, redo the commits and tag, and push with `git push --force-with-lease` (not `--force`) so the rewrite refuses if anyone else pushed in the meantime. |
 | `update-version.sh` missing | Convention not adopted | `/release-workflows:setup` |
 | `update-version.sh` failed | See its stderr | Most are real bugs (lockfile out of sync, manifest reformatted) |
 | Push rejected: "Required status check ci-success is expected" | Pusher not in ruleset bypass | See [`references/github-app.md`](../references/github-app.md) Phase 4 |

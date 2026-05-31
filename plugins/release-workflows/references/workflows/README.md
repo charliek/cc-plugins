@@ -20,6 +20,7 @@ cross-repo refs to chase when debugging.
 | [`job-version-check.yml`](job-version-check.yml) | Asserts the tag matches the repo's version manifest. Generic; takes manifest path + extraction regex inline. |
 | [`job-ci-gate.yml`](job-ci-gate.yml) | Polls `ci-success` on the tagged commit and refuses to publish unless it's green. Universal; copy as-is. |
 | [`job-create-release.yml`](job-create-release.yml) | Extracts this tag's CHANGELOG section and `gh release create`s. Universal. |
+| [`job-finalize-release.yml`](job-finalize-release.yml) | Runs after build jobs; flips the release out of draft and marks it `latest` so the public download URLs are reachable. Universal — required whenever any post-build job curls assets from the public URL (homebrew, etc.). |
 | [`job-sparkle-appcast.yml`](job-sparkle-appcast.yml) | EdDSA-signs a built DMG, appends to the appcast XML, bot-pushes to main. Mac/Sparkle-specific. |
 | [`job-apt-dispatch.yml`](job-apt-dispatch.yml) | Fires a `repository_dispatch` at an apt-repo receiver after the .debs are uploaded. Generic dispatch pattern; receiver repo is a config knob. Uses a release-bot App token (PAT alternative documented inline). |
 | [`job-homebrew-tap.yml`](job-homebrew-tap.yml) | Renders an in-repo formula template with the released tarball sha256s and pushes `Formula/<name>.rb` to a tap repo. The GoReleaser-free `brews:` equivalent for hand-built binaries. Uses a release-bot App token. |
@@ -34,8 +35,10 @@ on push tag v*:
   ci-gate              ← generic
   create-release       ← generic
   <build jobs>         ← repo-specific (mac DMG, linux .deb, Docker image, …)
-  <publish jobs>       ← mixed; some generic (apt-dispatch, sparkle-appcast),
-                                some repo-specific
+  finalize-release     ← generic; required if any publish job reads assets
+                         from the public releases/download/<tag>/... URL
+  <publish jobs>       ← mixed; some generic (apt-dispatch, sparkle-appcast,
+                                homebrew-tap), some repo-specific
 ```
 
 The generic jobs are byte-for-byte the same across repos. The build
@@ -121,7 +124,8 @@ in doubt, copy the proven version inline rather than tweaking by hand.
 | `job-version-check.yml` | roost v0.0.6, strix releases | Stable. |
 | `job-ci-gate.yml` | roost v0.0.6 (with the `?check_name=` server-side filter) | Stable. |
 | `job-create-release.yml` | every release using the convention | Stable. |
+| `job-finalize-release.yml` | strix v0.0.2 (post-mortem from the draft-release failure mode) | Added after a strix release ended up with assets attached to a tag-less draft (`gh release create` occasionally produces this when the tag isn't yet API-visible). The flip-out-of-draft step makes the public asset URLs reachable so homebrew/etc. can read them. |
 | `job-sparkle-appcast.yml` | roost v0.0.6 (after the URL-embedded-token fix) | The `http.extraheader` form was theoretically correct but broken in practice — git accepts the config but the HTTP layer ignores it. Current shape uses URL-embedded token. See [`../github-app.md`](../github-app.md) "git push authentication" gotcha. |
 | `job-apt-dispatch.yml` | strix releases, roost v0.0.6 | Stable. |
-| `job-homebrew-tap.yml` | strix releases | Stable. |
+| `job-homebrew-tap.yml` | strix releases (v0.0.2 added curl retry-with-backoff for the public-URL CDN propagation delay) | Stable. Curl retries handle the 5-20s window between release publish and public download URL serving. |
 | `sanity-check-app.yml.template` | strix, roost (multi-target shape) | Stable. |

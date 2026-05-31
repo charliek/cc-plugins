@@ -76,7 +76,29 @@ fi
 #    --workspace is the surface that actually moves.
 #    --offline is safe: we're only changing internal version strings,
 #    not touching the dep tree, so the cache is sufficient.
-cargo update --workspace --offline >/dev/null
+#
+#    Resolve cargo via `mise exec` when the repo pins its toolchain
+#    there (.mise.toml is the source of truth), else fall back to
+#    whatever cargo is on PATH (CI runners installing Rust via
+#    actions-rs / actions/setup-rust don't need mise; same goes for
+#    rustup users). Without this the script silently inherits the
+#    caller's shell — non-interactive shells (`bash -c`, a release
+#    skill subprocess, etc.) often don't have cargo on PATH even
+#    when `mise install` already provisioned the pinned toolchain.
+#    This was strix v0.0.2's failure mode before the fix: set -e
+#    killed the run cleanly, but the symptom read as a lockfile bug
+#    rather than a missing-cargo bug.
+if command -v mise >/dev/null 2>&1 && [[ -f .mise.toml ]]; then
+  cargo=(mise exec -- cargo)
+elif command -v cargo >/dev/null 2>&1; then
+  cargo=(cargo)
+else
+  echo "error: cargo not found and 'mise exec' unavailable." >&2
+  echo "       Install Rust (via rustup) or run inside a shell where" >&2
+  echo "       \`mise exec -- cargo --version\` or \`cargo --version\` works." >&2
+  exit 1
+fi
+"${cargo[@]}" update --workspace --offline >/dev/null
 
 # 4. Verify the lockfile saw the bump. If Cargo.toml updated but
 #    Cargo.lock didn't, a member crate likely overrides version manually.
