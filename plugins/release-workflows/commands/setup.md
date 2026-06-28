@@ -71,6 +71,7 @@ Ask the user which of these the repo ships:
 
 - GitHub Release with binary assets (almost always yes)
 - Sparkle appcast (Mac auto-update via EdDSA-signed feed)
+- Mac Developer ID signing + notarization (Gatekeeper-clean DMG) — `references/mac-signing/` (woven into the mac build job, not a standalone job)
 - Homebrew tap (formula update in another repo) — `references/workflows/job-homebrew-tap.yml` (requires `references/workflows/job-finalize-release.yml` between build and homebrew — see that file's header)
 - apt repo (repository_dispatch to a receiver repo)
 - Docker images (push to a registry) — `references/workflows/job-docker-push.yml` not yet shipped
@@ -93,6 +94,17 @@ scoped to the tap / receiver repo via `actions/create-github-app-token`. The App
 must be installed on those repos too. See `references/github-app.md`, "Cross-repo
 bot pushes". (The legacy `HOMEBREW_TAP_TOKEN` / `APT_DISPATCH_TOKEN` PATs are
 documented inline in each template as the alternative.)
+
+Mac Developer ID signing + notarization is **not** a standalone job — it's a job
+`env:` block plus three steps woven into the mac build job (cert import before
+the bundle; notarize + staple after the DMG, before the upload/appcast-sign).
+See `references/mac-signing/` (README + `notarize.sh.template` + `build-steps.yml`).
+It's inert until all six Apple secrets land (gated together as `CAN_NOTARIZE`,
+all-or-nothing — a signed-but-un-notarized DMG is still Gatekeeper-blocked), so
+it's safe to add ahead of provisioning — the DMG ships ad-hoc-signed until then.
+One Developer ID Application cert signs all of a team's apps, so the cert + Team
+ID are shared across repos; only the per-app `<APP>_DEVELOPER_ID_IDENTITY` secret
+name differs.
 
 ## Phase 3 — GitHub App + secrets + branch protection
 
