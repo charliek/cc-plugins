@@ -1,0 +1,67 @@
+# Mac Developer ID signing + notarization — steps woven into the mac build job.
+#
+# NOT a standalone job. These are (a) a job-level `env:` block and (b) three
+# `steps:` that interleave with the existing mac build job. See README.md in
+# this directory for the model + the ordering trap.
+#
+# Steps below are indented 6 spaces so they sit under `    steps:`. The env
+# block is indented 4 spaces to sit under the job. Replace placeholders:
+#   <APP>              — env-var prefix, e.g. ROOST, SHED_DESKTOP
+#   <KEYCHAIN_NAME>    — any unique name, e.g. roost-signing
+#   <DMG_PATH_EXPR>    — shell expr for the built DMG, e.g.
+#                        build/MyApp-${GITHUB_REF_NAME#v}.dmg
+#   <NOTARIZE_SCRIPT>  — path to the repo's notarize.sh, e.g. ./scripts/notarize.sh
+
+# --- (a) add to the mac build job's `env:` (4-space indent) ---
+    env:
+      # Surfaced from secrets; empty when unset → ad-hoc signing + no notarization.
+      <APP>_DEVELOPER_ID_IDENTITY: ${{ secrets.<APP>_DEVELOPER_ID_IDENTITY }}
+      HAS_CERT: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 != '' }}
+
+# --- (b) steps (6-space indent) ---
+
+      # BEFORE the bundle step. Inert until the cert secret exists; imports the
+      # Developer ID Application cert into a throwaway keychain so codesign (in
+      # the bundle script) and notarization can use it.
+      - name: Import Developer ID certificate
+        if: env.HAS_CERT == 'true'
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          kc="$RUNNER_TEMP/<KEYCHAIN_NAME>.keychain-db"
+          kp="$(openssl rand -base64 24)"
+          security create-keychain -p "$kp" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$kp" "$kc"
+          echo "$MACOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$kc" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$kp" "$kc"
+          # Prepend our keychain to the user search list, keeping the existing
+          # ones; the command substitution must word-split into separate paths.
+          # shellcheck disable=SC2046
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | sed 's/"//g')
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      # AFTER the DMG is built, BEFORE upload-to-Release + any EdDSA sign_update
+      # (stapling rewrites the DMG bytes). No-op without the APPLE_* secrets.
+      - name: Notarize + staple (skipped without credentials)
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: <NOTARIZE_SCRIPT> "<DMG_PATH_EXPR>"
+
+      # Gate first-launch / release-note guidance on the REAL artifact state —
+      # a Developer-ID-signed but un-notarized DMG is still Gatekeeper-blocked,
+      # so "cert exists" is the wrong signal. Reference ${{ steps.dmg_notarized.outputs.value }}
+      # from the create-release step's notes.
+      - name: Detect DMG notarization status
+        id: dmg_notarized
+        run: |
+          if xcrun stapler validate "<DMG_PATH_EXPR>" >/dev/null 2>&1; then
+            echo "value=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+          fi

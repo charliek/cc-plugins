@@ -25,6 +25,11 @@ cross-repo refs to chase when debugging.
 | [`job-apt-dispatch.yml`](job-apt-dispatch.yml) | Fires a `repository_dispatch` at an apt-repo receiver after the .debs are uploaded. Generic dispatch pattern; receiver repo is a config knob. Uses a release-bot App token (PAT alternative documented inline). |
 | [`job-homebrew-tap.yml`](job-homebrew-tap.yml) | Renders an in-repo formula template with the released tarball sha256s and pushes `Formula/<name>.rb` to a tap repo. The GoReleaser-free `brews:` equivalent for hand-built binaries. Uses a release-bot App token. |
 
+Mac Developer ID signing + notarization is **not** in this table because it
+isn't a standalone job — it's a job `env:` block plus steps woven into the mac
+build job. Its templates live in [`../mac-signing/`](../mac-signing/) (README +
+`notarize.sh.template` + `build-steps.yml`).
+
 ## Composition
 
 Every release workflow has the same skeleton:

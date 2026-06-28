@@ -62,7 +62,7 @@ this section with the policy: what gets bumped to what, in which step.
 |---|---|---|
 | `RELEASE_BOT_CLIENT_ID` | `<RELEASE_BOT_NAME>` GitHub App Client ID | required |
 | `RELEASE_BOT_APP_KEY` | App private key (.pem) | required |
-{:: list any pipeline-specific secrets: SPARKLE_ED_PRIVATE_KEY (Sparkle), APT_DISPATCH_TOKEN (apt-dispatch), HOMEBREW_TAP_TOKEN (homebrew), etc. with a note on optional vs required and what happens if unset. ::}
+{:: list any pipeline-specific secrets: SPARKLE_ED_PRIVATE_KEY (Sparkle), APT_DISPATCH_TOKEN (apt-dispatch), HOMEBREW_TAP_TOKEN (homebrew), etc. with a note on optional vs required and what happens if unset. For Mac Developer ID signing + notarization, list the six: MACOS_CERTIFICATE_P12_BASE64 (presence is the HAS_CERT gate), MACOS_CERTIFICATE_PASSWORD, <APP>_DEVELOPER_ID_IDENTITY, APPLE_ID, APPLE_TEAM_ID, APPLE_APP_SPECIFIC_PASSWORD — all unset → ad-hoc-signed DMG (Gatekeeper-bypass note); see references/mac-signing/. ::}
 
 ## Branch protection
 
