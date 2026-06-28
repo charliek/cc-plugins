@@ -88,6 +88,18 @@ or EdDSA-signs the DMG must run *after* notarization:
   from the Release: notarize + staple must finish before the build job's
   "upload DMG to Release" step, so the uploaded artifact is the stapled one.
 
+## CI gotcha: `hdiutil create` "Resource busy"
+
+Packaging the DMG with `hdiutil create` on a macOS runner intermittently fails
+with `hdiutil: create failed - Resource busy` — transient device/Spotlight
+contention, often right after codesign touches the bundle, **not** a real error
+and unrelated to signing (the same command runs ad-hoc too). It surfaced on
+shed-desktop's *first* notarized release. Make the repo's make-dmg script
+resilient: wrap `hdiutil create` in a short retry loop (e.g. 5× with a few
+seconds' backoff, `rm -f` the partial DMG between attempts) so a one-off flake
+doesn't fail an otherwise-good release. See `mac/scripts/make-dmg.sh` in roost or
+`scripts/make-dmg.sh` in shed-desktop.
+
 ## Verifying a notarized DMG
 
 `stapler validate <dmg>` is the authoritative check (and what `notarize.sh`
