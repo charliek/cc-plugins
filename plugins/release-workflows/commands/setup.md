@@ -99,11 +99,12 @@ Mac Developer ID signing + notarization is **not** a standalone job — it's a j
 `env:` block plus three steps woven into the mac build job (cert import before
 the bundle; notarize + staple after the DMG, before the upload/appcast-sign).
 See `references/mac-signing/` (README + `notarize.sh.template` + `build-steps.yml`).
-It's inert until the six Apple secrets land (`HAS_CERT` gates on
-`MACOS_CERTIFICATE_P12_BASE64`), so it's safe to add ahead of provisioning — the
-DMG ships ad-hoc-signed until then. One Developer ID Application cert signs all
-of a team's apps, so the cert + Team ID are shared across repos; only the
-per-app `<APP>_DEVELOPER_ID_IDENTITY` secret name differs.
+It's inert until all six Apple secrets land (gated together as `CAN_NOTARIZE`,
+all-or-nothing — a signed-but-un-notarized DMG is still Gatekeeper-blocked), so
+it's safe to add ahead of provisioning — the DMG ships ad-hoc-signed until then.
+One Developer ID Application cert signs all of a team's apps, so the cert + Team
+ID are shared across repos; only the per-app `<APP>_DEVELOPER_ID_IDENTITY` secret
+name differs.
 
 ## Phase 3 — GitHub App + secrets + branch protection
 

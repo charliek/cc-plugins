@@ -1,30 +1,38 @@
 # Mac Developer ID signing + notarization — steps woven into the mac build job.
 #
-# NOT a standalone job. These are (a) a job-level `env:` block and (b) three
-# `steps:` that interleave with the existing mac build job. See README.md in
-# this directory for the model + the ordering trap.
+# NOT a standalone job. These are (a) a job-level `env:` gate and (b) steps that
+# interleave with the existing mac build job. See README.md in this directory
+# for the model + the ordering trap.
 #
-# Steps below are indented 6 spaces so they sit under `    steps:`. The env
-# block is indented 4 spaces to sit under the job. Replace placeholders:
+# All-or-nothing: CAN_NOTARIZE requires the FULL six-secret set. A
+# signed-but-un-notarized DMG is still Gatekeeper-blocked, so signing without
+# notarizing has no value — and a partial secret rollout must fall back to a
+# clean ad-hoc build (first-launch note intact, build green), not break or
+# half-sign. So the identity reaches the bundle/DMG steps and the notarize step
+# runs ONLY when all six secrets are present.
+#
+# Steps below are indented 6 spaces to sit under `    steps:`; the env block is
+# 4 spaces to sit under the job. Replace placeholders:
 #   <APP>              — env-var prefix, e.g. ROOST, SHED_DESKTOP
 #   <KEYCHAIN_NAME>    — any unique name, e.g. roost-signing
 #   <DMG_PATH_EXPR>    — shell expr for the built DMG, e.g.
 #                        build/MyApp-${GITHUB_REF_NAME#v}.dmg
 #   <NOTARIZE_SCRIPT>  — path to the repo's notarize.sh, e.g. ./scripts/notarize.sh
+#   <BUNDLE_STEP> / <DMG_STEP> — the repo's existing "build the .app" and
+#                        "package the DMG" steps (repo-specific; shown below only
+#                        for where to add the identity env)
 
 # --- (a) add to the mac build job's `env:` (4-space indent) ---
     env:
-      # Surfaced from secrets; empty when unset → ad-hoc signing + no notarization.
-      <APP>_DEVELOPER_ID_IDENTITY: ${{ secrets.<APP>_DEVELOPER_ID_IDENTITY }}
-      HAS_CERT: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 != '' }}
+      CAN_NOTARIZE: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.<APP>_DEVELOPER_ID_IDENTITY != '' && secrets.APPLE_ID != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' }}
 
 # --- (b) steps (6-space indent) ---
 
-      # BEFORE the bundle step. Inert until the cert secret exists; imports the
-      # Developer ID Application cert into a throwaway keychain so codesign (in
-      # the bundle script) and notarization can use it.
+      # BEFORE the bundle step. Imports the Developer ID Application cert into a
+      # throwaway keychain so codesign (in the bundle script) + notarization can
+      # use it. Inert unless all six secrets are present.
       - name: Import Developer ID certificate
-        if: env.HAS_CERT == 'true'
+        if: env.CAN_NOTARIZE == 'true'
         env:
           MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -44,9 +52,25 @@
           security list-keychains -d user -s "$kc" $(security list-keychains -d user | sed 's/"//g')
           rm -f "$RUNNER_TEMP/cert.p12"
 
+      # Hand the identity to the repo's EXISTING bundle + DMG steps ONLY when
+      # CAN_NOTARIZE — otherwise empty, so the bundle script takes its ad-hoc
+      # path and the DMG keeps its first-launch note. Add this `env:` to both
+      # the bundle step and the DMG-packaging step:
+      #
+      #   - name: <BUNDLE_STEP>            # e.g. "Build + bundle"
+      #     env:
+      #       <APP>_DEVELOPER_ID_IDENTITY: ${{ env.CAN_NOTARIZE == 'true' && secrets.<APP>_DEVELOPER_ID_IDENTITY || '' }}
+      #     run: ...
+      #   - name: <DMG_STEP>               # e.g. "Package DMG"
+      #     env:
+      #       <APP>_DEVELOPER_ID_IDENTITY: ${{ env.CAN_NOTARIZE == 'true' && secrets.<APP>_DEVELOPER_ID_IDENTITY || '' }}
+      #     run: ...
+
       # AFTER the DMG is built, BEFORE upload-to-Release + any EdDSA sign_update
-      # (stapling rewrites the DMG bytes). No-op without the APPLE_* secrets.
+      # (stapling rewrites the DMG bytes). Gated so it never tries to notarize an
+      # ad-hoc DMG.
       - name: Notarize + staple (skipped without credentials)
+        if: env.CAN_NOTARIZE == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -55,8 +79,8 @@
 
       # Gate first-launch / release-note guidance on the REAL artifact state —
       # a Developer-ID-signed but un-notarized DMG is still Gatekeeper-blocked,
-      # so "cert exists" is the wrong signal. Reference ${{ steps.dmg_notarized.outputs.value }}
-      # from the create-release step's notes.
+      # so "cert exists" is the wrong signal. Reference
+      # ${{ steps.dmg_notarized.outputs.value }} from the create-release notes.
       - name: Detect DMG notarization status
         id: dmg_notarized
         run: |

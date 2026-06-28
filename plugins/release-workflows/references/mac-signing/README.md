@@ -7,27 +7,41 @@ by Gatekeeper. Unlike the `job-*.yml` fragments, signing + notarization is
 job — the cert has to be in the keychain before the bundle is built, and the
 DMG has to be notarized before it's uploaded/EdDSA-signed.
 
-Everything here is **inert until the cert secret exists**. `HAS_CERT` keys off
-`MACOS_CERTIFICATE_P12_BASE64`; with no secrets the bundle ships ad-hoc-signed
-and the build still succeeds (Gatekeeper-bypass note in the DMG). Add the six
-secrets below and the next release is signed + notarized with no code change.
+Everything here is **inert until all six secrets exist** (the `CAN_NOTARIZE`
+gate). With any one missing, the bundle ships ad-hoc-signed and the build still
+succeeds (Gatekeeper-bypass note in the DMG). Add all six and the next release
+is signed + notarized with no code change.
+
+**All-or-nothing — don't gate on the cert alone.** A signed-but-un-notarized DMG
+is still Gatekeeper-blocked, so signing without notarizing has no value. Gating
+on just `MACOS_CERTIFICATE_P12_BASE64` breaks under a partial secret rollout two
+ways: cert set but notary creds missing → a Developer-ID-signed DMG ships
+un-notarized *with the first-launch note dropped* (still blocked, no guidance);
+notary creds set but cert missing → notarytool is asked to notarize an ad-hoc
+DMG and the job fails. Require the whole set in one `CAN_NOTARIZE` expression,
+hand the identity to the bundle/DMG steps only when it's true, and gate the
+notarize step on it too; any gap falls back cleanly to ad-hoc.
 
 ## The pieces
 
-1. **Job env** (on the mac build job):
+1. **Job env** (on the mac build job) — a single all-or-nothing gate over the
+   full secret set:
    ```yaml
    env:
-     <APP>_DEVELOPER_ID_IDENTITY: ${{ secrets.<APP>_DEVELOPER_ID_IDENTITY }}
-     HAS_CERT: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 != '' }}
+     CAN_NOTARIZE: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.<APP>_DEVELOPER_ID_IDENTITY != '' && secrets.APPLE_ID != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' }}
    ```
-   Empty identity → the bundle script falls back to ad-hoc (`-`) signing.
+   The identity is **not** set unconditionally at job level; it's handed to the
+   bundle/DMG steps only when `CAN_NOTARIZE` (see step 3), so an empty value →
+   the bundle script's ad-hoc (`-`) path.
 
-2. **Import the cert** into a throwaway keychain (gated on `HAS_CERT`), before
-   the bundle step. See `build-steps.yml`.
+2. **Import the cert** into a throwaway keychain (gated on `CAN_NOTARIZE`),
+   before the bundle step. See `build-steps.yml`.
 
 3. **The repo's bundle script signs with the identity.** This part is
-   repo-owned (it knows the bundle layout). It must, when
-   `<APP>_DEVELOPER_ID_IDENTITY` is set: codesign every nested Mach-O
+   repo-owned (it knows the bundle layout). The identity is passed to the
+   bundle + DMG steps as
+   `${{ env.CAN_NOTARIZE == 'true' && secrets.<APP>_DEVELOPER_ID_IDENTITY || '' }}`.
+   When set, the bundle script must: codesign every nested Mach-O
    (helpers, then frameworks `--deep` without the app's entitlements, then the
    outer `.app`) with `--options runtime` (hardened runtime — required for
    notarization) and `--timestamp`. See roost `mac/scripts/bundle.sh` and
@@ -47,7 +61,7 @@ secrets below and the next release is signed + notarized with no code change.
 
 | Secret | Purpose |
 |---|---|
-| `MACOS_CERTIFICATE_P12_BASE64` | Developer ID Application cert+key, base64 of the `.p12`. Its presence is the `HAS_CERT` gate. |
+| `MACOS_CERTIFICATE_P12_BASE64` | Developer ID Application cert+key, base64 of the `.p12`. Part of the `CAN_NOTARIZE` gate. |
 | `MACOS_CERTIFICATE_PASSWORD` | `.p12` export password |
 | `<APP>_DEVELOPER_ID_IDENTITY` | codesign identity, e.g. `Developer ID Application: Name (TEAMID)` |
 | `APPLE_ID` | Apple ID email for notarytool |
