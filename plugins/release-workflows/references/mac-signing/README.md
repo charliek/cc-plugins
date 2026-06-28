@@ -105,7 +105,7 @@ Gotcha: `spctl -a -t open --context context:primary-signature <dmg>` reports
 *codesigned* DMG, but the standard flow notarizes an un-codesigned DMG and
 relies on the stapled ticket. Don't use it as the pass/fail check.
 
-## Optional hardening: staple the .app too
+## Optional offline robustness: staple the .app too
 
 The flow above notarizes + staples the **DMG**; the app inside is notarized
 (its cdhash was in the submission) but carries no stapled ticket of its own, so
