@@ -41,7 +41,7 @@ bootstrap procedure behind it, not a replacement.
 
 ## Installation
 
-```
+```text
 /plugin marketplace add charliek/cc-plugins
 /plugin install flutter-drive@cc-plugins
 ```

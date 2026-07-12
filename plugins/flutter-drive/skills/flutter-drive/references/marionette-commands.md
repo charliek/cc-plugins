@@ -19,12 +19,18 @@ URI connections for fully stateless operation.
 1. Start your Flutter app in debug mode and note the VM service URI.
 2. Interact directly: `marionette --uri <ws-uri> <command> [args]`
 
-No registration, no cleanup, no files on disk. Each command opens a fresh
-WebSocket connection, executes, and disconnects.
+No registration state and no cleanup — nothing is written to the instance
+registry. Each command opens a fresh WebSocket connection, executes, and
+disconnects. (Commands whose job is to produce output — `take-screenshots` and
+`record-video` — still write their PNG/WebM files to `--output` even in `--uri`
+mode; "stateless" refers to the registry, not to their deliberate output files.)
 
 ## Global Options
 
-  -i, --instance <name>    Target instance (required unless --uri is used)
+  -i, --instance <name>    Target instance. For commands that act on a running
+                           app (see each command's "Requires:" line), exactly one
+                           of -i or --uri is required. Registry-only commands
+                           (`list`, `doctor`) take neither.
       --uri <ws-uri>       VM service WebSocket URI — bypasses registry,
                            mutually exclusive with --instance
       --timeout <seconds>  Connection timeout (default: 5)
@@ -141,10 +147,13 @@ Enter text into a text field.
 
   Requires: -i <instance> or --uri <ws-uri>
 
-  Options (all required):
-    --key <string>      Match text field by key (or use --text)
-    --text <string>     Match text field by visible text
+  Options:
+    --key <string>      Match text field by key (alternative to --text)
+    --text <string>     Match text field by visible text (alternative to --key)
     --input <string>    Text to enter (mandatory)
+
+  Provide exactly one of --key or --text (not both) to select the field, plus the
+  mandatory --input.
 
   Example:
     marionette -i my-app enter-text --key email_field --input "user@example.com"

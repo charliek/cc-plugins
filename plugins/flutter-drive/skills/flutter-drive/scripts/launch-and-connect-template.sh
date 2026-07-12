@@ -64,11 +64,22 @@ trap cleanup EXIT
 
 DEVICE="${1:-${DEVICES[0]}}"
 INSTANCE="${2:-$INSTANCE_DEFAULT}"
+# Marionette instance names are [A-Za-z0-9_-]+; reject anything else early rather
+# than feeding it to `register` (or into the temp-file name / printed commands).
+if ! [[ "$INSTANCE" =~ ^[A-Za-z0-9_-]+$ ]]; then
+  echo "Invalid instance name: '$INSTANCE'. Allowed characters: letters, digits, '-', '_'." >&2
+  exit 1
+fi
 MARIONETTE="${MARIONETTE:-$(command -v marionette || echo "$HOME/.pub-cache/bin/marionette")}"
 
 REPO="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 if [ -n "$APP_SUBDIR" ]; then APP="$REPO/$APP_SUBDIR"; else APP="$REPO"; fi
-LOG="$(mktemp -t "${INSTANCE}-flutter-XXXXXX").log"
+# Reserve the temp file with mktemp, then rename it to a .log suffix — appending
+# ".log" to $(mktemp ...) would leave the reserved file orphaned and write to a
+# different, unreserved path. Rename the actual reserved file so nothing leaks.
+LOG="$(mktemp -t "${INSTANCE}-flutter-XXXXXX")"
+mv "$LOG" "$LOG.log"
+LOG="$LOG.log"
 
 if [ ! -x "$MARIONETTE" ] && ! command -v "$MARIONETTE" >/dev/null 2>&1; then
   echo "marionette CLI not found. Install: dart pub global activate marionette_cli" >&2

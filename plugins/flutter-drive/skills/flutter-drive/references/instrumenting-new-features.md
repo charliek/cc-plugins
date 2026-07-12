@@ -38,11 +38,14 @@ An agent must be able to confirm an action worked. A transient `SnackBar` may
 auto-dismiss before it's read and isn't keyed, so it is **not** a reliable signal.
 For any create/update/delete/validate, do one of:
 
-- Emit a structured log: `logDriveResult('<noun>-<verb>', ok: true)` (from
+- Emit a structured log: `logDriveResult('<noun>-<verb>', ok: true)` on success and
+  `logDriveResult('<noun>-<verb>', ok: false, error: '<reason>')` on failure (from
   `stridelabs_drive`, `drive_state.dart`) → an agent reads `get-logs | grep MRESULT`.
-  Preferred — works headless and survives the SnackBar dismissing. Follow the
-  existing `<noun>-<verb>` action-name convention. The mutation providers/services
-  are the canonical place to emit these.
+  **Emit BOTH outcomes** — the failure form is mandatory, not optional: an agent
+  can't distinguish "still running" from "failed silently" unless the error path
+  also logs. Preferred — works headless and survives the SnackBar dismissing. Follow
+  the existing `<noun>-<verb>` action-name convention. The mutation
+  providers/services are the canonical place to emit these.
 - Or render a durable, **keyed** result/error widget (like a keyed `login-error` /
   `<screen>-error`), not just a SnackBar.
 

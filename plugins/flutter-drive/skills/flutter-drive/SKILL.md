@@ -153,9 +153,9 @@ leaving `flutter run` alive for driving.
 .claude/skills/drive-<app>/scripts/launch-and-connect.sh macos    # or: linux | android
 ```
 
-By hand: `flutter run -d macos --dart-define-from-file=env/dev.json
---dart-define-from-file=env/dev.local.json`, take the "Dart VM Service" line,
-convert `http://…/` → `ws://…/ws`, `marionette register <instance> <ws>`.
+By hand: `flutter run -d macos --dart-define-from-file=env/dev.json --dart-define-from-file=env/dev.local.json`,
+take the "Dart VM Service" line, convert `http://…/` → `ws://…/ws`,
+`marionette register <instance> <ws>`.
 
 Every Marionette command/flag is in `references/marionette-commands.md`.
 
