@@ -10,6 +10,7 @@ Shared Claude Code plugins for development workflows.
 | [release](plugins/release/) | Commands | `/release:release` for semver software releases with GoReleaser |
 | [deploy](plugins/deploy/) | Commands | `/deploy:build` for date-based releases that trigger Docker builds |
 | [planning](plugins/planning/) | Commands | `/planning:ask-codex`, `/planning:ask-kimi`, `/planning:ask-coderabbit`, `/planning:ask-panel` for AI-powered plan review |
+| [flutter-drive](plugins/flutter-drive/) | Skill | `flutter-drive:flutter-drive` — drive/debug/verify any StrideLabs Marionette-instrumented Flutter app over the Dart VM Service |
 
 ## Installation
 
@@ -19,6 +20,7 @@ Shared Claude Code plugins for development workflows.
 /plugin install release@cc-plugins
 /plugin install deploy@cc-plugins
 /plugin install planning@cc-plugins
+/plugin install flutter-drive@cc-plugins
 ```
 
 ## Adding new plugins

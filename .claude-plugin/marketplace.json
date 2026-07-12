@@ -41,6 +41,12 @@
       "description": "Delegate coding tasks and code reviews to the Cursor agent CLI from Claude Code",
       "source": "./plugins/cursor",
       "category": "development"
+    },
+    {
+      "name": "flutter-drive",
+      "description": "Drive, debug, and visually verify any StrideLabs Marionette-instrumented Flutter app over the Dart VM Service: the app-agnostic driving rules, MSTATE/MRESULT contract, headless-login pattern, Marionette CLI reference, and a launch-script template for bootstrapping a new app's drive skill",
+      "source": "./plugins/flutter-drive",
+      "category": "development"
     }
   ]
 }

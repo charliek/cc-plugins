@@ -1,0 +1,7 @@
+{
+  "name": "flutter-drive",
+  "description": "Drive, debug, and visually verify any StrideLabs Marionette-instrumented Flutter app over the Dart VM Service — the app-agnostic driving rules, MSTATE/MRESULT contract, headless-login pattern, and a launch-script template for bootstrapping a new app's drive skill",
+  "author": {
+    "name": "charliek"
+  }
+}
