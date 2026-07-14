@@ -152,8 +152,9 @@ Per repo that changed:
    accepted risks in the PR body. Never silently ignore a finding.
 4. **Default: leave the PR open** — green, findings reacted to, ready for
    the user's own review and merge decision. Merge yourself
-   (`/git-commands:merge-pr`) ONLY if the scope brief or plan explicitly
-   requested auto-merge.
+   (`/git-commands:merge-pr`, or `gh pr merge` if that plugin isn't
+   installed) ONLY if the scope brief or plan explicitly requested
+   auto-merge.
 5. **Never release/deploy** unless the brief explicitly says otherwise.
 
 ## Final status update
