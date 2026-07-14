@@ -39,4 +39,4 @@ Check that the Cursor `agent` CLI is ready to use, then report a concise readine
    - Version (from `agent about`)
    - Next steps if anything is missing (install, or `agent login`).
 
-5. **Mention discovery:** the default model used by this plugin's commands is `gpt-5.5-high`; run `agent --list-models` to see all available model ids that can be passed with `--model`.
+5. **Mention discovery:** the default model used by this plugin's commands is `gpt-5.6-sol-high`; run `agent --list-models` to see all available model ids that can be passed with `--model`.

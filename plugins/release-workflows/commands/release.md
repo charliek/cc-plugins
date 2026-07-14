@@ -94,7 +94,7 @@ test -x scripts/release/update-version.sh
 If the file is missing or not executable, **stop**. The convention requires
 this script. Tell the user:
 
-> This repo hasn't adopted the release-workflows convention — `scripts/release/update-version.sh` is missing. Run `/release-workflows:setup` to bootstrap, or use the legacy `/release:release` skill if you're not ready to migrate.
+> This repo hasn't adopted the release-workflows convention — `scripts/release/update-version.sh` is missing. Run `/release-workflows:setup` to bootstrap.
 
 Don't try to bump manifests yourself. The reason the script exists is
 that LLM-driven bumps are unreliable for repos with lockfiles or
