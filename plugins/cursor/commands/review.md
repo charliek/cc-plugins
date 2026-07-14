@@ -10,7 +10,7 @@ Run a read-only code review of local git changes through the Cursor `agent` CLI.
 Raw slash-command arguments:
 `$ARGUMENTS`
 
-Default model: `gpt-5.6-sol-high` (override with `--model <id>`; run `agent --list-models` for ids).
+Default model: `cursor-grok-4.5-high` (override with `--model <id>`; run `agent --list-models` for ids).
 
 Core constraint:
 
@@ -51,7 +51,7 @@ Run the review:
     echo; echo "--- staged diff ---"; git diff --cached
     echo; echo "--- unstaged diff ---"; git diff
     echo "=== END CHANGES ==="
-  } | agent -p --mode plan --model gpt-5.6-sol-high
+  } | agent -p --mode plan --model cursor-grok-4.5-high
   ```
 
 - **Branch / base scope** (replace `<base>` with the resolved ref, default `main`):
@@ -65,13 +65,13 @@ Run the review:
     echo; echo "--- changed files (vs <base>) ---"; git diff --name-status <base>...HEAD
     echo; echo "--- diff (vs <base>) ---"; git diff <base>...HEAD
     echo "=== END CHANGES ==="
-  } | agent -p --mode plan --model gpt-5.6-sol-high
+  } | agent -p --mode plan --model cursor-grok-4.5-high
   ```
 
   - The heredoc body is fixed instruction text (no user-controlled input), so `CURSOR_REVIEW` is collision-safe here. The streamed diff cannot collide — it arrives after the heredoc closes.
   - `--mode plan` keeps Cursor read-only (it analyzes and may read files, but makes no edits).
   - Use `timeout: 600000` on foreground runs. For `--background`, launch this `Bash` pipeline with `run_in_background: true` and tell the user: "Cursor review started in the background." Do not wait for it in this turn.
-  - If the user passed `--model <id>`, use it in place of `gpt-5.6-sol-high`.
+  - If the user passed `--model <id>`, use it in place of `cursor-grok-4.5-high`.
 
 Present results:
 
