@@ -1,0 +1,7 @@
+{
+  "name": "flows",
+  "description": "Named end-to-end build flows: gauntlet (plan → panel review → gated commits → verification → one PR per repo) and the gated-commit inner loop",
+  "author": {
+    "name": "charliek"
+  }
+}

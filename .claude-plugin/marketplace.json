@@ -47,6 +47,12 @@
       "description": "Drive, debug, and visually verify any StrideLabs Marionette-instrumented Flutter app over the Dart VM Service: the app-agnostic driving rules, MSTATE/MRESULT contract, headless-login pattern, Marionette CLI reference, and a launch-script template for bootstrapping a new app's drive skill",
       "source": "./plugins/flutter-drive",
       "category": "development"
+    },
+    {
+      "name": "flows",
+      "description": "Named end-to-end build flows: gauntlet (plan → panel review → gated commits → verification → one PR per repo) and the gated-commit inner loop",
+      "source": "./plugins/flows",
+      "category": "development"
     }
   ]
 }
