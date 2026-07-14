@@ -144,7 +144,8 @@ Per repo that changed:
    privacy/secret impact, any accepted risks the plan dispositioned — and
    the relevant plan text in a collapsible `<details>` block at the bottom.
    Cross-link the sibling PRs when the plan spans repos.
-2. Run `/git-commands:watch-pr` until CI is green.
+2. Run `/git-commands:watch-pr` until CI is green. If the `git-commands`
+   plugin isn't installed, watch CI directly (`gh pr checks`) and say so.
 3. Bot reviews: **verify the bot actually reviewed** (a rate-limited
    CodeRabbit can show as "pass" with no review body). For each finding:
    fix it, or reply on the thread with the disposition rationale and note

@@ -28,7 +28,8 @@ multiple repos; the unit of delivery is one PR per repo that changes.
    a collapsible block, cross-linked to sibling PRs) →
    `/git-commands:watch-pr` → bot findings fixed or replied to.
    **Default: leave the PRs open for the user's merge decision**; auto-merge
-   only when the scope brief explicitly requests it. Never release/deploy.
+   only when the scope brief explicitly requests it. Never release/deploy
+   unless the brief explicitly says otherwise.
 
 Runs autonomously: proceeds on decisions already aligned or clearly won,
 stops only for one-way doors, large-rework decisions, or undiscussed
