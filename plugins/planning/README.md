@@ -6,11 +6,11 @@ Commands for submitting implementation plans to external AI reviewers and incorp
 
 ### `/planning:ask-codex [plan-file-path]`
 
-Submit a plan to Codex CLI (OpenAI) for review. Pipes review instructions and plan content to `codex exec -`, which evaluates the plan in the context of the current repository.
+Submit a plan to Codex CLI (OpenAI) for review, running `gpt-5.6-sol` at high reasoning effort (non-fast). Pipes review instructions and plan content to `codex exec`, which evaluates the plan in the context of the current repository.
 
-### `/planning:ask-kimi [plan-file-path]`
+### `/planning:ask-glm [plan-file-path]`
 
-Submit a plan to Kimi K2.6 (Moonshot AI via Fireworks) for review using opencode CLI. Kimi proactively explores the repository to understand conventions before reviewing the plan.
+Submit a plan to GLM 5.2 (Z.ai) for review using opencode CLI. GLM proactively explores the repository to understand conventions before reviewing the plan.
 
 ### `/planning:ask-coderabbit [plan-file-path]`
 
@@ -18,10 +18,10 @@ Submit a plan to CodeRabbit for review using the `coderabbit:code-reviewer` agen
 
 ### `/planning:ask-panel [plan-file-path]`
 
-Run all three reviewers (Codex, Kimi, CodeRabbit) in parallel, synthesize feedback, and incorporate improvements. Consensus findings (multiple reviewers agree) are prioritized.
+Run all three reviewers (Codex, GLM, CodeRabbit) in parallel, synthesize feedback, and incorporate improvements. Consensus findings (multiple reviewers agree) are prioritized.
 
 ## Prerequisites
 
 - [Codex CLI](https://developers.openai.com/codex/cli) installed (`npm i -g @openai/codex`) (for ask-codex and ask-panel)
-- [opencode CLI](https://opencode.ai) installed with Fireworks AI configured (for ask-kimi and ask-panel)
+- [opencode CLI](https://opencode.ai) installed with Z.ai (`zai-coding-plan`) configured (for ask-glm and ask-panel)
 - CodeRabbit plugin installed (for ask-coderabbit and ask-panel) — uses the `coderabbit:code-reviewer` agent, no CLI required

@@ -1,11 +1,11 @@
 ---
-description: Ask Kimi K2.6 to review and challenge an implementation plan
+description: Ask GLM 5.2 to review and challenge an implementation plan
 argument-hint: "[plan-file-path]"
 ---
 
-# Ask Kimi Command
+# Ask GLM Command
 
-Submit an implementation plan to Kimi K2.6 (via opencode + Fireworks AI) for review. Kimi reads the plan, explores the repository to understand conventions, and provides feedback on completeness, acceptance criteria, test coverage, and architectural alignment.
+Submit an implementation plan to GLM 5.2 (via opencode + Z.ai) for review. GLM reads the plan, explores the repository to understand conventions, and provides feedback on completeness, acceptance criteria, test coverage, and architectural alignment.
 
 Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the active plan file from the current conversation context (typically in `~/.claude/plans/`).
 
@@ -30,7 +30,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    - [ ] **No conversation dependencies**: Fully understandable without prior chat context
    - [ ] **Repo conventions**: Matches the repo's existing patterns (naming, structure, tooling)
 
-4. **Submit the plan to Kimi for review**: Pipe the plan content to opencode with a review prompt.
+4. **Submit the plan to GLM for review**: Pipe the plan content to opencode with a review prompt.
 
    Run the following as a **single Bash command** (the temp directory variable must remain in scope):
 
@@ -38,7 +38,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    tmpdir=$(mktemp -d) && \
    echo "TMPDIR=$tmpdir" && \
    cat "<plan-file-path>" | opencode run \
-     -m "fireworks-ai/accounts/fireworks/models/kimi-k2p6" \
+     -m "zai-coding-plan/glm-5.2" \
      -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? Provide specific, actionable feedback organized by category." \
      > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"
    ```
@@ -49,13 +49,13 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 
    Check the exit code. If non-zero, read `$tmpdir/stderr.txt` for error details and stop. Otherwise read `$tmpdir/output.txt` for the review.
 
-   **Note:** Kimi via opencode will proactively explore the repository to understand existing patterns and conventions before providing feedback.
+   **Note:** GLM via opencode will proactively explore the repository to understand existing patterns and conventions before providing feedback.
 
-5. **Evaluate findings**: Analyze each piece of feedback from Kimi
+5. **Evaluate findings**: Analyze each piece of feedback from GLM
    - **Fix**: missing acceptance criteria, unclear exit conditions, incomplete test coverage, architectural misalignment, standalone readability issues, missing edge cases
    - **Skip**: style-only suggestions, subjective preferences, feedback that doesn't improve the plan
 
 6. **Incorporate feedback**: Edit the plan file with worthwhile improvements
 
-7. **Report results**: Summarize what was refined (step 3), what Kimi found, what was incorporated, and what was skipped
+7. **Report results**: Summarize what was refined (step 3), what GLM found, what was incorporated, and what was skipped
    - Clean up: `rm -rf "$tmpdir"` (use the actual temp directory path from step 4)

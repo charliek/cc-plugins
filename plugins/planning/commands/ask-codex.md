@@ -5,7 +5,7 @@ argument-hint: "[plan-file-path]"
 
 # Ask Codex Command
 
-Submit an implementation plan to Codex CLI for review. Codex reads the plan and provides feedback on completeness, acceptance criteria, test coverage, and architectural alignment.
+Submit an implementation plan to Codex CLI for review, running `gpt-5.6-sol` at high reasoning effort (non-fast). Codex reads the plan and provides feedback on completeness, acceptance criteria, test coverage, and architectural alignment.
 
 Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the active plan file from the current conversation context (typically in `~/.claude/plans/`).
 
@@ -37,7 +37,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    ```bash
    tmpdir=$(mktemp -d) && \
    echo "TMPDIR=$tmpdir" && \
-   codex exec --full-auto -o "$tmpdir/codex.txt" \
+   codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" --full-auto -o "$tmpdir/codex.txt" \
      "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? Provide specific, actionable feedback organized by category.
 
    ---BEGIN PLAN---
@@ -46,7 +46,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
      2>"$tmpdir/stderr.txt"
    ```
 
-   **Important:** `--full-auto` lets Codex explore the repo for context. `-o` captures the final response to a file.
+   **Important:** `-m gpt-5.6-sol -c model_reasoning_effort="high"` pins the model and reasoning effort (non-fast). `--full-auto` lets Codex explore the repo for context. `-o` captures the final response to a file.
 
    **Note the temp directory path** from the `TMPDIR=...` output line — use it when reading output files and during cleanup.
 

@@ -1,14 +1,14 @@
 ---
-description: Ask Codex, Kimi K2.6, and CodeRabbit to review a plan in parallel, synthesize and incorporate feedback
+description: Ask Codex, GLM 5.2, and CodeRabbit to review a plan in parallel, synthesize and incorporate feedback
 argument-hint: "[plan-file-path]"
 ---
 
 # Ask Panel Command
 
-Run Codex, Kimi K2.6, and CodeRabbit plan reviews in parallel, synthesize their feedback, and incorporate improvements. Three different AI reviewers provide broad coverage and high confidence in findings they agree on.
+Run Codex, GLM 5.2, and CodeRabbit plan reviews in parallel, synthesize their feedback, and incorporate improvements. Three different AI reviewers provide broad coverage and high confidence in findings they agree on.
 
-- **Codex** (OpenAI) — reviews via `codex exec`, explores the repo with `--full-auto`
-- **Kimi K2.6** (Moonshot AI via Fireworks) — reviews via `opencode run`, proactively explores the repo
+- **Codex** (OpenAI) — reviews via `codex exec` (`gpt-5.6-sol` at high reasoning effort), explores the repo with `--full-auto`
+- **GLM 5.2** (Z.ai) — reviews via `opencode run`, proactively explores the repo
 - **CodeRabbit** — reviews via `coderabbit:code-reviewer` agent, reads repo files directly
 
 Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the active plan file from the current conversation context (typically in `~/.claude/plans/`).
@@ -17,7 +17,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 
 1. **Check prerequisites**: Verify available tools
    - Run `codex --version 2>&1` — note if Codex is available
-   - Run `opencode --version 2>&1` — note if opencode (for Kimi) is available
+   - Run `opencode --version 2>&1` — note if opencode (for GLM) is available
    - CodeRabbit agent requires no CLI prerequisite (it's a built-in subagent type)
    - If **no** tools are available, tell the user and stop
    - If some tools are missing, warn the user and proceed with the available tools
@@ -55,7 +55,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    > ```bash
    > tmpdir=$(mktemp -d)
    > trap 'rm -rf "$tmpdir"' EXIT
-   > codex exec --full-auto -o "$tmpdir/codex.txt" \
+   > codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" --full-auto -o "$tmpdir/codex.txt" \
    >   "Review the following implementation plan. Evaluate standalone readability, acceptance criteria, test coverage, and repo pattern alignment. Provide specific, actionable feedback organized by category.
    >
    >   ---BEGIN PLAN---
@@ -69,18 +69,18 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    > cat "$tmpdir/codex.txt"
    > ```
 
-   **Kimi reviewer** (if opencode CLI is available):
+   **GLM reviewer** (if opencode CLI is available):
    Use the Agent tool with `subagent_type: "general-purpose"` and `run_in_background: true`.
-   Prompt the agent to run the Kimi review and return only the review text:
+   Prompt the agent to run the GLM review and return only the review text:
 
-   > You are a plan reviewer. Run the following Bash command to get a Kimi K2.6 review of an implementation plan, then return ONLY the review text (no commentary or wrapper).
+   > You are a plan reviewer. Run the following Bash command to get a GLM 5.2 review of an implementation plan, then return ONLY the review text (no commentary or wrapper).
    >
    > Run as a single Bash command:
    > ```bash
    > tmpdir=$(mktemp -d)
    > trap 'rm -rf "$tmpdir"' EXIT
    > cat "<plan-file-path>" | opencode run \
-   >   -m "fireworks-ai/accounts/fireworks/models/kimi-k2p6" \
+   >   -m "zai-coding-plan/glm-5.2" \
    >   -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone? 2) Are acceptance criteria clear? 3) Does it include test coverage? 4) Does it match repo conventions? Provide specific, actionable feedback." \
    >   > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"
    > if [ $? -ne 0 ] || [ ! -s "$tmpdir/output.txt" ]; then
@@ -106,7 +106,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 
 6. **Synthesize feedback**: Compile a unified list of all findings from all reviewers. Every finding should be evaluated on its own merit regardless of which reviewer raised it.
    - **Prioritization**: Findings flagged by multiple reviewers are likely higher priority, but a finding from a single reviewer is still valid and should be evaluated
-   - **Reviewer strength**: Codex tends to be the strongest reviewer. Give its unique findings strong consideration. Kimi and CodeRabbit may catch things Codex misses but weigh their findings accordingly.
+   - **Reviewer strength**: Codex tends to be the strongest reviewer. Give its unique findings strong consideration. GLM and CodeRabbit may catch things Codex misses but weigh their findings accordingly.
    - **Contradictions**: When reviewers disagree on the same topic, flag for user review rather than acting autonomously
    - Do not discard findings just because only one reviewer raised them
 

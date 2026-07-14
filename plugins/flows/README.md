@@ -15,7 +15,7 @@ multiple repos; the unit of delivery is one PR per repo that changes.
 2. **Plan** — `~/.claude/plans/<repo>/NNN-<slug>.md` in the house style with
    PINNED decisions (plans and verification artifacts stay OUT of the repos;
    a repo CLAUDE.md can explicitly opt in to in-repo conventions instead)
-3. **Panel** — `/planning:ask-panel` (Codex + Kimi + CodeRabbit), findings
+3. **Panel** — `/planning:ask-panel` (Codex + GLM + CodeRabbit), findings
    incorporated. Every plan goes through the panel — including new or
    materially revised plans produced mid-run
 4. **Gated commits** — per repo: one branch, one PR; each commit runs

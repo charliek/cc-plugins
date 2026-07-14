@@ -97,7 +97,7 @@ grouped per repo, since each repo becomes its own PR.
 
 ## Phase 3 — Panel review
 
-- Run `/planning:ask-panel <plan-file>` (Codex + Kimi + CodeRabbit).
+- Run `/planning:ask-panel <plan-file>` (Codex + GLM + CodeRabbit).
 - Incorporate findings on their merits; where a finding conflicts with a
   pinned decision, resolve it explicitly in the plan (adopt, adapt, or
   document why not). Record the panel corrections in the plan's header.

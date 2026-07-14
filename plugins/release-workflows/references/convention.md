@@ -172,6 +172,5 @@ bump leads to the kind of incomplete bump that happened in roost's
 v0.0.5 (the lockfile wasn't bumped because the LLM didn't know to). The
 script is the only path; if it's absent, fix that first.
 
-The legacy `release:release` skill is the fallback during migration.
-Once every repo in scope has adopted the convention, that plugin can
-be retired.
+The legacy `release` plugin that once served as the migration fallback
+has been retired; `release-workflows` is now the only supported path.

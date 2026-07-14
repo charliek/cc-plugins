@@ -13,12 +13,6 @@
       "category": "development"
     },
     {
-      "name": "release",
-      "description": "Software release commands for creating semver-tagged releases with changelog generation and GoReleaser",
-      "source": "./plugins/release",
-      "category": "development"
-    },
-    {
       "name": "release-workflows",
       "description": "Convention-based release commands: cut a semver release using a repo's update-version.sh, and bootstrap new repos onto the convention with templates for update-version scripts, release.yml jobs, RELEASING.md, and a shared release-bot GitHub App",
       "source": "./plugins/release-workflows",
@@ -32,7 +26,7 @@
     },
     {
       "name": "planning",
-      "description": "Commands for submitting implementation plans to Codex, Kimi K2.5, and CodeRabbit for AI review and autonomous feedback incorporation",
+      "description": "Commands for submitting implementation plans to Codex, GLM 5.2, and CodeRabbit for AI review and autonomous feedback incorporation",
       "source": "./plugins/planning",
       "category": "development"
     },
