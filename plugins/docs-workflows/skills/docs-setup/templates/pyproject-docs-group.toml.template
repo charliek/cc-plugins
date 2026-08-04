@@ -1,0 +1,19 @@
+# Merge this into the repo's existing pyproject.toml.
+#
+# If the repo has no pyproject.toml at all, create a minimal one first -- a
+# dependency group cannot stand on its own:
+#
+#   [project]
+#   name = "{{SITE_NAME}}-docs"
+#   version = "0.1.0"
+#   description = "Documentation for {{SITE_NAME}}"
+#   requires-python = ">=3.12"
+#
+# Zensical is 0.0.x and ships frequently, so commit uv.lock and have CI use
+# `uv sync --locked`. Do NOT also pin pymdown-extensions: it arrives
+# transitively via zensical, and pinning it twice invites version conflicts.
+
+[dependency-groups]
+docs = [
+    "zensical>=0.0.52",
+]
