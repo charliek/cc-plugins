@@ -13,6 +13,7 @@ Shared Claude Code plugins for development workflows.
 | [cursor](plugins/cursor/) | Commands | `/cursor:rescue`, `/cursor:review`, `/cursor:adversarial-review` — delegate coding tasks and reviews to the Cursor agent CLI |
 | [flutter-drive](plugins/flutter-drive/) | Skill | `flutter-drive:flutter-drive` — drive/debug/verify any StrideLabs Marionette-instrumented Flutter app over the Dart VM Service |
 | [flows](plugins/flows/) | Commands | `/flows:gauntlet` and `/flows:gated-commit` for end-to-end build flows (plan → panel review → gated commits → PR) |
+| [docs-workflows](plugins/docs-workflows/) | Skills | `docs-workflows:docs-setup` and `docs-workflows:docs-migrate` — stand up a Zensical docs site, or port one from Material for MkDocs |
 
 ## Installation
 
@@ -25,6 +26,7 @@ Shared Claude Code plugins for development workflows.
 /plugin install cursor@cc-plugins
 /plugin install flutter-drive@cc-plugins
 /plugin install flows@cc-plugins
+/plugin install docs-workflows@cc-plugins
 ```
 
 ## Adding new plugins

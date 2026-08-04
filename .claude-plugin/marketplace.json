@@ -43,6 +43,12 @@
       "category": "development"
     },
     {
+      "name": "docs-workflows",
+      "description": "Zensical documentation-site tooling: docs-setup scaffolds a new site the house way (zensical.toml, uv docs group, GitHub Pages workflows, house doc conventions), docs-migrate ports an existing Material for MkDocs site to Zensical with a mandatory page-set and anchor verification loop",
+      "source": "./plugins/docs-workflows",
+      "category": "development"
+    },
+    {
       "name": "flows",
       "description": "Named end-to-end build flows: gauntlet (plan → panel review → gated commits → verification → one PR per repo) and the gated-commit inner loop",
       "source": "./plugins/flows",

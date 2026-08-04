@@ -1,0 +1,7 @@
+{
+  "name": "docs-workflows",
+  "description": "Stand up and maintain Zensical documentation sites: docs-setup scaffolds a new site the house way (zensical.toml, uv docs group, GitHub Pages workflows), docs-migrate ports an existing Material for MkDocs site to Zensical with a mandatory verification loop",
+  "author": {
+    "name": "charliek"
+  }
+}
