@@ -193,16 +193,53 @@ Typical hits: `README.md` and `docs/development/setup.md` (both usually carry
 a "uses MkDocs with Material theme" blurb plus `uv run mkdocs serve` /
 `mkdocs build`), and a passing mention in `RELEASING.md` or `CONTRIBUTING.md`.
 
+**Check the `Makefile` too** — it is the hit most easily missed, because
+`docs:` / `docs-serve:` targets are real invocations that break silently until
+someone runs them. Point them at the same commands CI uses, `--locked`
+included:
+
+```make
+docs:  ## Build the docs site into site-build/ (same as CI)
+	uv sync --locked --group docs && uv run --locked zensical build --strict
+
+docs-serve:  ## Serve the docs locally with live reload
+	uv sync --locked --group docs && uv run --locked zensical serve
+```
+
 **Do not edit `CHANGELOG.md` history.** Old entries describing the MkDocs
 setup are accurate history.
 
+### 6a. Fill fleet gaps rather than porting them forward
+
+Older configs are often missing keys their siblings have. A pure translation
+faithfully reproduces the gap. Check for and add:
+
+| Missing key | Consequence of leaving it out |
+|---|---|
+| `theme.icon.logo` | no project mark beside the shared owl — the header cannot say *which* tool this is |
+| `site_author` | `<meta name="author">` renders empty on every page |
+| `edit_uri` | no "edit this page" links |
+| trailing slash on `site_url` | canonical URLs take a non-standard form |
+
+Call these out explicitly in the PR — they are deliberate additions, not part
+of the mechanical translation, and a reviewer diffing key-for-key will
+otherwise wonder where they came from.
+
 ### 7. Verify — the part that is not optional
 
+`zensical build` has **no `-d` / `--dir` flag** — its only options are
+`-f/--config-file`, `-c/--clean`, `-s/--strict`. Output always goes to
+`site_dir`, so build in place and copy the result aside to compare:
+
 ```bash
-uv run --locked zensical build --clean --strict -d /tmp/verify/zensical  # or via site_dir
+uv run --locked zensical build --clean --strict   # -> site_dir (site-build/)
+cp -R site-build /tmp/verify/zensical
 diff <(cd /tmp/verify/mkdocs   && find . -name '*.html' | sort) \
      <(cd /tmp/verify/zensical && find . -name '*.html' | sort)
 ```
+
+Note `--clean` cleans the *cache*, not the output directory. `rm -rf site-build`
+first if a stale page could otherwise linger and mask a removal.
 
 **Compare HTML pages only.** Do *not* diff the full file tree: MkDocs ships
 ~40 `lunr/*` search files and Zensical ships the Disco worker, so the asset
@@ -256,6 +293,9 @@ docs.
 | `exclude_docs` unsupported, silently ignored | Withheld pages get published |
 | `material.extensions.emoji.*` namespace | Build aborts, `ModuleNotFoundError` |
 | `serve --strict` unsupported | Verify with `build --strict` |
+| `build` has no `-d` flag | `Error: No such option '-d'`; build to `site_dir`, copy aside |
+| `build --clean` cleans the *cache* | Not the output dir; `rm -rf site-build` to be sure |
+| `Makefile` `docs:` targets | Missed by a config-only sweep; break silently |
 | `!!python/name:` tags | `yaml.safe_load` / `yq` throw |
 | No moving `v9` tag for `setup-uv` | CI "unable to find version" |
 | `actionlint` passes on bad action tags | It checks syntax, not existence |
