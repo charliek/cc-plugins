@@ -92,7 +92,23 @@ Work through `references/mkdocs-to-zensical.md` key by key. Produce
 in `mkdocs.yml` gets a row saying where it went or why it disappeared. This
 table is the deliverable that catches silent key-dropping.
 
-The three translations that are not mechanical:
+**Adopt the shared theme rather than translating the look.** The palette,
+font stack and feature toggles do *not* get carried across — they come from
+[stridelabs-docs-theme](https://github.com/charliek/stridelabs-docs-theme).
+Translating them into the new config defeats the point: the fleet would drift
+again on the next restyle. So:
+
+- `theme.palette`, `theme.font`, `theme.features` → **drop**, the theme owns
+  them
+- `theme.icon.logo` → **keep**, it is what identifies this project beside the
+  shared owl
+- add `name = "stridelabs"` under `[project.theme]`
+
+Note the theme sets `font: false` and self-hosts its faces. Carrying a
+`font.text` / `font.code` setting across re-enables Zensical's Google Fonts
+`<link>` and reintroduces a third-party request on every page.
+
+The three *content* translations that are not mechanical:
 
 - **`theme.name: material`** → `[project.theme] variant = "modern"`. Pin it
   explicitly. `"classic"` reproduces the Material look if the repo wants no
@@ -124,7 +140,17 @@ CI points at a config that does not exist. Instead:
 [dependency-groups]
 docs = [
     "zensical>=0.0.52",
+    "stridelabs-docs-theme",
 ]
+
+[tool.uv.sources]
+stridelabs-docs-theme = { git = "https://github.com/charliek/stridelabs-docs-theme", tag = "v0.2.0" }
+```
+
+Check the theme's current tag first:
+
+```bash
+gh release view --repo charliek/stridelabs-docs-theme --json tagName -q .tagName
 ```
 
 Drop `mkdocs`, `mkdocs-material`, **and** `pymdown-extensions` — the last
@@ -192,6 +218,16 @@ ids = lambda p: re.findall(r'<h[1-6][^>]*id="([^"]+)"', open(p).read())
 ```
 
 And `<head>` metadata (`description`, `author`, `canonical`) on a sample page.
+
+Confirm the theme actually applied — a missing theme still builds clean and
+renders as stock Zensical:
+
+```bash
+grep -c 'sl-lockup'  site-build/index.html   # owl + project icon header
+grep -c 'css/fonts.css' site-build/index.html
+ls site-build/fonts/*.woff2 | wc -l          # self-hosted faces copied
+grep -c 'fonts.googleapis\|fonts.gstatic' site-build/index.html   # must be 0
+```
 
 **Expected, benign delta:** `<title>` comes from the nav title under MkDocs
 but from the page `<h1>` under Zensical, so `CLI - proj` becomes

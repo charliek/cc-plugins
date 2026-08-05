@@ -67,12 +67,31 @@ Copy `templates/zensical.toml.template` to `zensical.toml` and substitute:
 | `{{LOGO_ICON}}` | an icon from the bundled sets, e.g. `material/console` |
 | `{{DEV_PORT}}` | local preview port, pick an unused one |
 
-Everything else in the template is a **house default** — theme variant,
-feature list, palette, extensions, `site_dir = "site-build"`. Do not change
-them without a reason; they are what makes the fleet consistent.
-
+`{{LOGO_ICON}}` is the only visual choice per repo — it is what distinguishes
+this site from its siblings, rendered beside the shared owl in the header.
 Icon sets available: `fontawesome`, `lucide`, `material`, `octicons`,
 `simple`.
+
+Everything else in the template is a **house default** — extensions,
+`site_dir = "site-build"`, and `theme.name = "stridelabs"`. Do not change
+them without a reason; they are what makes the fleet consistent.
+
+### 1a. The shared theme
+
+`theme.name = "stridelabs"` pulls in
+[stridelabs-docs-theme](https://github.com/charliek/stridelabs-docs-theme),
+which supplies the palette, the feature toggles, the self-hosted type stack,
+and the owl + project-icon header lockup. **Do not copy those into the
+repo's own config** — the whole point is that one version bump restyles every
+site.
+
+Fonts are self-hosted by the theme, so a site built this way makes **no**
+requests to `fonts.googleapis.com` or `fonts.gstatic.com`. Nothing else is
+needed to get that.
+
+To opt a repo out of the shared look, drop `name` and set `variant = "modern"`
+(or `"classic"` for the Material for MkDocs appearance). Everything else in
+the template still works.
 
 ### 2. Dependency group
 
@@ -84,7 +103,14 @@ uv sync --group docs
 ```
 
 Commit the resulting `uv.lock`. Zensical is 0.0.x and moves fast, so the
-lockfile is what makes builds reproducible.
+lockfile is what makes builds reproducible. It pins the theme's resolved
+commit SHA alongside the tag, so the look is reproducible too.
+
+Check the theme's latest tag before pinning:
+
+```bash
+gh release view --repo charliek/stridelabs-docs-theme --json tagName -q .tagName
+```
 
 ### 3. Docs skeleton
 
@@ -174,5 +200,9 @@ New docs should follow them:
   supported way to keep a file in `docs_dir` out of the published site — move
   it out of `docs_dir` instead.
 - **`serve --strict` is unsupported.** Verify with `build --strict`.
+- **Do not add a `font` setting.** The theme sets `font: false` and ships its
+  own woff2 files. Setting `font.text` / `font.code` here re-enables
+  Zensical's Google Fonts `<link>` and reintroduces the third-party request
+  the theme exists to avoid — while the self-hosted faces keep loading too.
 - `--strict` fails the build on broken links *and* broken heading anchors.
   This is a feature; it is why both workflows use it.

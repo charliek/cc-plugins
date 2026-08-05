@@ -40,6 +40,25 @@ The verification loop is not optional, because of trap #1 below.
 Bundled reference: `skills/docs-migrate/references/mkdocs-to-zensical.md` — a
 key-by-key mapping table covering every key observed across the fleet.
 
+## The shared theme
+
+Both skills wire new and migrated repos to
+**[stridelabs-docs-theme](https://github.com/charliek/stridelabs-docs-theme)**,
+installed as a plain git dependency from a public repo — no PyPI, no registry
+auth, so forks and outside contributors can still build the docs.
+
+The theme owns the palette, feature toggles, self-hosted type stack, and the
+owl + project-icon header lockup. A repo's own `zensical.toml` therefore
+carries only what is genuinely repo-specific: site metadata, nav, markdown
+extensions, and `theme.icon.logo` — the icon shown beside the shared owl.
+
+That is the point of the split: restyling ~24 sites is a tag bump in each
+repo, not 24 CSS edits. `docs-migrate` explicitly **drops** a repo's existing
+palette/font/feature settings rather than translating them, because carrying
+them across would let the fleet drift again.
+
+Opting a single repo out is one line — see the theme's README.
+
 ## Three traps these skills exist to encode
 
 Verified against Zensical 0.0.52:

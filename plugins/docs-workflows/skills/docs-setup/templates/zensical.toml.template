@@ -40,47 +40,20 @@ dev_addr = "127.0.0.1:{{DEV_PORT}}"
 # -----------------------------------------------------------------------------
 # Theme
 # -----------------------------------------------------------------------------
+# The shared StrideLabs theme supplies the palette, the self-hosted type stack
+# (no Google Fonts requests), the feature toggles, and the owl + project-icon
+# header lockup. Anything set here overrides it.
+#
+# To opt this repo out of the shared look entirely, drop `name` and set
+# `variant = "modern"` (or "classic" for the Material for MkDocs appearance).
 [project.theme]
+name = "stridelabs"
 
-# Pinned explicitly rather than relying on the default. "classic" reproduces
-# the Material for MkDocs look if that is ever wanted.
-variant = "modern"
-
-features = [
-  "content.code.annotate",
-  "content.code.copy",
-  "content.tabs.link",
-  "navigation.expand",
-  "navigation.footer",
-  "navigation.sections",
-  "navigation.top",
-  "search.highlight",
-  "search.share",
-]
-
-# Icon sets available: fontawesome, lucide, material, octicons, simple
+# The icon that says *which* tool this is -- rendered beside the shared owl.
+# Any icon from the sets Zensical ships: material, lucide, fontawesome,
+# octicons, simple.
 [project.theme.icon]
 logo = "{{LOGO_ICON}}"
-
-[project.theme.font]
-text = "Roboto"
-code = "Roboto Mono"
-
-[[project.theme.palette]]
-media = "(prefers-color-scheme: light)"
-scheme = "default"
-primary = "indigo"
-accent = "indigo"
-toggle.icon = "lucide/sun"
-toggle.name = "Switch to dark mode"
-
-[[project.theme.palette]]
-media = "(prefers-color-scheme: dark)"
-scheme = "slate"
-primary = "indigo"
-accent = "indigo"
-toggle.icon = "lucide/moon"
-toggle.name = "Switch to light mode"
 
 # -----------------------------------------------------------------------------
 # Extra
