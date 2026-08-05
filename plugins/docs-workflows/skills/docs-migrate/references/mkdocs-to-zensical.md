@@ -64,6 +64,17 @@ Consequences:
 
 ## Theme
 
+**If the repo is adopting the shared StrideLabs theme** (the default —
+`theme.name = "stridelabs"`), most of this section does not apply: the
+palette, font stack and feature toggles come from the theme package and
+should be *dropped* rather than translated. Carrying them across defeats the
+point of a shared theme, and a `font.*` setting in particular re-enables
+Zensical's Google Fonts `<link>` on top of the theme's self-hosted faces.
+
+Keep only `theme.icon.logo` — it identifies the project beside the shared owl.
+
+The table below is for repos deliberately opting out of the shared theme.
+
 | mkdocs.yml | zensical.toml |
 |---|---|
 | `theme.name: material` | `[project.theme]` `variant = "modern"` (or `"classic"` for the Material look) |
