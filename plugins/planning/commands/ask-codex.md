@@ -37,7 +37,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    ```bash
    tmpdir=$(mktemp -d) && \
    echo "TMPDIR=$tmpdir" && \
-   codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" --full-auto -o "$tmpdir/codex.txt" \
+   codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" -s read-only -o "$tmpdir/codex.txt" \
      "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? Provide specific, actionable feedback organized by category.
 
    ---BEGIN PLAN---
@@ -46,7 +46,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
      2>"$tmpdir/stderr.txt"
    ```
 
-   **Important:** `-m gpt-5.6-sol -c model_reasoning_effort="high"` pins the model and reasoning effort (non-fast). `--full-auto` lets Codex explore the repo for context. `-o` captures the final response to a file.
+   **Important:** `-m gpt-5.6-sol -c model_reasoning_effort="high"` pins the model and reasoning effort (non-fast). `-s read-only` lets Codex explore (read) the repo for context without edits — plan review needs no writes. (The old `--full-auto` flag was removed from `codex exec` and now errors.) `-o` captures the final response to a file.
 
    **Note the temp directory path** from the `TMPDIR=...` output line — use it when reading output files and during cleanup.
 

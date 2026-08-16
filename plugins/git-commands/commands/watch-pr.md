@@ -41,11 +41,13 @@ Use `$ARGUMENTS` as an optional PR number. If not provided, use the PR associate
      CodeRabbit typically completes within a few minutes; if no review
      has appeared after ~10 minutes, move on to step 7.
    - **Note:** parallel reviewers spawned via the `Agent` tool (e.g.
-     `subagent_type: "codex:codex-rescue"` or
+     `subagent_type: "codex-cli:codex-rescue"` or
      `subagent_type: "coderabbit:code-reviewer"`) are *complementary*
      to the automatic CodeRabbit check on the PR — different reviewer,
-     different perspective. If you launched one in parallel with
-     `/watch-pr`, synthesize both sets of findings before responding.
+     different perspective. Review-purpose rescue agents must be prompted
+     to run read-only (their default is write-capable). If you launched
+     one in parallel with `/watch-pr`, synthesize both sets of findings
+     before responding.
 
 6. **Handle review comments**: Evaluate and address feedback
    - Read the review comments from the PR

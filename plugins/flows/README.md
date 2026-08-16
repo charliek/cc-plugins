@@ -47,7 +47,7 @@ Just the per-commit inner loop, for any change that deserves discipline
 without the full flow: repo gate (from CLAUDE.md) → **conditional**
 `/simplify` (only for new-file or multi-call-site diffs; sonnet or opus by
 diff difficulty, never the top-tier model) → codex review with a **hard
-12-minute cap** and cursor fallback, adversarialness scaled to the gravity
+10-minute cap** and cursor fallback, adversarialness scaled to the gravity
 of the change → findings dispositioned → one commit.
 
 ## Repo conventions the flows expect
@@ -70,7 +70,7 @@ picked up and respected.
 ## Cross-plugin dependencies
 
 `gauntlet` uses `planning` (ask-panel), `git-commands` (watch-pr, merge-pr),
-and `codex`/`cursor` (review agents) when installed, degrading gracefully
+and `codex-cli`/`cursor` (review agents) when installed, degrading gracefully
 with a note when they aren't.
 
 New flows join this plugin as sibling commands once their shape has been
