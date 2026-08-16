@@ -55,7 +55,7 @@ Because the heredoc body includes user-controlled focus text, **always use a per
   cat "$tmpdir/review.txt"
   ```
 
-- **Branch / base scope** (replace `<base>` with the resolved ref, default `main`): use the same pipeline but stream `git diff --name-status <base>...HEAD` and `git diff <base>...HEAD`, and word the heredoc as "the diff of HEAD against <base>".
+- **Branch / base scope** (replace `<base>` with the resolved ref, default `main`): use the same pipeline but stream `git diff --name-status <base>...HEAD` and `git diff <base>...HEAD`, and word the heredoc as "the diff of HEAD against <base>". **Validate the ref first** with `git rev-parse --verify --quiet "<base>"` and stop with an error if it doesn't resolve — a failed `git diff` inside the pipeline would otherwise feed Codex an empty diff that reads as "nothing to review" while the pipeline still exits 0.
 - `-s read-only` keeps Codex read-only (it analyzes and may read files, but makes no edits). Use `timeout: 600000` on foreground runs. For `--background`, launch the pipeline with `run_in_background: true` and tell the user: "Codex adversarial review started in the background." Do not wait for it in this turn.
 - If the user passed `--model <id>`, use it in place of `gpt-5.6-sol`; if `--effort <level>`, use it in place of `high`.
 

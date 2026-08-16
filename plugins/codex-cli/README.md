@@ -2,7 +2,7 @@
 
 Delegate coding tasks and code reviews to the [Codex CLI](https://developers.openai.com/codex/cli) (`codex exec`) from Claude Code.
 
-This plugin drives `codex exec` directly in headless mode — one process per call, no daemon, no broker, no shared state. That makes it safe to run many rescues in parallel across (and within) projects, gives real stderr on failure, and lets Claude Code's own `Bash` timeouts enforce hard caps. Backgrounding uses Claude Code's background tasks, and session continuity uses Codex's native `codex exec resume --last`.
+This plugin drives `codex exec` directly in headless mode — one process per call, no daemon, no broker, no shared state. That makes it safe to run many **fresh** rescues in parallel across (and within) projects, gives real stderr on failure, and lets Claude Code's own `Bash` timeouts enforce hard caps. (Resumed runs are the exception: `--resume` selects the newest session in the repo, so use `--fresh` whenever concurrent tasks are possible.) Backgrounding uses Claude Code's background tasks, and session continuity uses Codex's native `codex exec resume --last`.
 
 It exists alongside OpenAI's official `codex` plugin, which drives a shared `codex app-server` broker instead: the broker is single-flight per workspace and its failure contract is "return nothing", which flows can't distinguish from "no findings". Use this plugin wherever those properties matter (automated flows, parallel sessions); the official plugin remains useful for `/codex:transfer` and its background job tracking.
 

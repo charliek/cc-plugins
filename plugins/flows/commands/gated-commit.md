@@ -43,7 +43,11 @@ reference). If empty, derive it from the diff.
 
 4. **Capped external review.** Run a review of the uncommitted diff with the
    `codex-cli:codex-rescue` agent (or `/codex-cli:rescue --read-only`),
-   prompted for CORRECTNESS bugs (not style — simplify owns that). Scale the review's adversarialness
+   prompted for CORRECTNESS bugs (not style — simplify owns that). The
+   review must run **read-only**: the rescue agent defaults to
+   write-capable, so the prompt must include `--read-only` (or explicitly
+   demand `-s read-only`) — a reviewer must never touch the diff it is
+   reviewing. Scale the review's adversarialness
    to the gravity of the change: routine commits get a straightforward
    correctness pass; changes touching data integrity, auth/security, money,
    migrations, or concurrency get an explicitly adversarial prompt (assume
@@ -51,8 +55,10 @@ reference). If empty, derive it from the diff.
    include:
    - the spec/context for the change (plan section or `$ARGUMENTS`),
    - specific failure modes to hunt for, tailored to the diff,
-   - a **HARD CAP of 10 minutes** — instruct the agent to kill codex and
-     report partial output if it stalls past the cap. NEVER wait unbounded.
+   - a **HARD CAP of 10 minutes** — instruct the agent to kill the
+     reviewer CLI and report partial output if it stalls past the cap
+     (phrased engine-neutrally so it applies to the cursor fallback too).
+     NEVER wait unbounded.
      (10 minutes matches the Bash tool's maximum timeout, so the cap is
      actually enforceable.)
 

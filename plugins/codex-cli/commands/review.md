@@ -44,7 +44,7 @@ Run the review:
   ```bash
   tmpdir=$(mktemp -d)
   trap 'rm -rf "$tmpdir"' EXIT
-  codex exec review --uncommitted -m gpt-5.6-sol -c model_reasoning_effort="high" \
+  codex exec -s read-only review --uncommitted -m gpt-5.6-sol -c model_reasoning_effort="high" \
     -o "$tmpdir/review.txt" >"$tmpdir/stdout.txt" 2>"$tmpdir/stderr.txt"
   status=$?
   if [ $status -ne 0 ] || [ ! -s "$tmpdir/review.txt" ]; then
@@ -55,7 +55,9 @@ Run the review:
   cat "$tmpdir/review.txt"
   ```
 
-- **Branch / base scope** (replace `<base>` with the resolved ref, default `main`): same pipeline with `--base <base>` in place of `--uncommitted`.
+- **Branch / base scope** (replace `<base>` with the resolved ref, default `main`): same pipeline with `--base <base>` in place of `--uncommitted`. Validate the ref first with `git rev-parse --verify --quiet "<base>"` and stop with an error if it doesn't resolve.
+
+- `-s read-only` sits at the `exec` level (before `review` — the subcommand rejects it) and pins the sandbox regardless of project/user config.
 
 - Use `timeout: 600000` on foreground runs. For `--background`, launch this `Bash` pipeline with `run_in_background: true` and tell the user: "Codex review started in the background." Do not wait for it in this turn.
 - If the user passed `--model <id>`, use it in place of `gpt-5.6-sol`; if `--effort <level>`, use it in place of `high`.

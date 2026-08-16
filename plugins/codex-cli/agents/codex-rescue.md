@@ -45,9 +45,9 @@ Forwarding rules:
 
 Model and routing flags (these are runtime controls, not part of the task text — strip them before building the command, and do not include them in the heredoc body):
 
-- `--model <id>`: use it in place of `gpt-5.6-sol`.
-- `--effort <level>`: use it in place of `high` in `-c model_reasoning_effort="..."`. Accepted values: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`.
-- `--resume`: use `codex exec resume --last - <<'...'` to continue the most recent Codex session in this repo. **Caveats:** `resume` accepts `-m`, `-c`, and `-o` but NOT `-s` (the sandbox mode carries over from the resumed session), and `--last` picks the newest session in this repo — if several Codex tasks run here in parallel, it may continue the wrong one, so prefer a fresh run (with the prior context restated in the task text) when parallel runs are plausible.
+- `--model <id>`: use it in place of `gpt-5.6-sol`. Validate before use: accept only ids matching `[A-Za-z0-9._-]+`; reject anything else (it would be interpolated into shell syntax outside the quoted heredoc).
+- `--effort <level>`: use it in place of `high` in `-c model_reasoning_effort="..."`. Allowlist strictly — accepted values are exactly `none`, `minimal`, `low`, `medium`, `high`, `xhigh`; reject anything else.
+- `--resume`: use `codex exec resume --last - <<'...'` to continue the most recent Codex session in this repo. **Caveats:** `resume` accepts `-m`, `-c`, and `-o` but NOT `-s` (the sandbox mode carries over from the resumed session), and `--last` picks the newest session in this repo — if several Codex tasks run here in parallel, it may continue the wrong one, so prefer a fresh run (with the prior context restated in the task text) when parallel runs are plausible. **Never combine resume with a read-only request**: the resumed session inherits its previous sandbox (possibly workspace-write), so run fresh with `-s read-only` instead.
 - `--fresh`: run a fresh `codex exec`, even if the request sounds like a follow-up.
 - `--background` / `--wait`: these are Claude-side execution controls. Strip them; never pass them to `codex`.
 - If neither `--resume` nor `--fresh` is present and the user is clearly continuing prior Codex work ("continue", "keep going", "resume", "apply the top fix", "dig deeper"), resume. Otherwise run fresh.

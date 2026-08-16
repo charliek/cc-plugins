@@ -25,6 +25,7 @@ Shared Claude Code plugins for development workflows.
 /plugin install deploy@cc-plugins
 /plugin install planning@cc-plugins
 /plugin install cursor@cc-plugins
+/plugin install codex-cli@cc-plugins
 /plugin install flutter-drive@cc-plugins
 /plugin install flows@cc-plugins
 /plugin install docs-workflows@cc-plugins
