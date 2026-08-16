@@ -19,7 +19,7 @@ Build a single `agent` invocation. **Pass the task text via a quoted heredoc on 
 Write-capable run (the default):
 
 ```bash
-agent -p --force --model cursor-grok-4.6-high <<'CURSOR_TASK_9f3a2b1c'
+agent -p --force --trust --model cursor-grok-4.6-high <<'CURSOR_TASK_9f3a2b1c'
 <task text exactly as the user gave it, with routing flags stripped>
 CURSOR_TASK_9f3a2b1c
 ```
@@ -27,7 +27,7 @@ CURSOR_TASK_9f3a2b1c
 Read-only run (when `--read-only` is present, or the user only wants review/diagnosis/research without edits) — replace `--force` with `--mode plan`:
 
 ```bash
-agent -p --mode plan --model cursor-grok-4.6-high <<'CURSOR_TASK_9f3a2b1c'
+agent -p --mode plan --trust --model cursor-grok-4.6-high <<'CURSOR_TASK_9f3a2b1c'
 <task text>
 CURSOR_TASK_9f3a2b1c
 ```
@@ -39,7 +39,7 @@ Flag handling (strip these from the task text before placing it in the heredoc b
 - `--read-only`: use `--mode plan` instead of `--force`.
 - `--model <id>`: use it in place of `cursor-grok-4.6-high`. There is no `--effort` flag — reasoning level is part of the model id.
 - `--resume`: add `--continue` (continue the previous Cursor session). `--fresh`: do not. If neither is given and the user is clearly continuing prior Cursor work ("continue", "keep going", "apply the top fix", "dig deeper"), add `--continue`; otherwise run fresh.
-- If a run stalls on a workspace-trust prompt, add `--trust`.
+- `--trust` is always on (it is in the invocations above, not optional): a headless run cannot answer the workspace-trust prompt, and the stall it causes is invisible — zero output until the timeout kills the run. Trusting is safe here: the run always targets a repo the user is already working in, and write-capable runs auto-approve with `--force` anyway.
 
 Output:
 

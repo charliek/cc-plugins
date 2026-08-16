@@ -42,11 +42,11 @@ Because the heredoc body includes user-controlled focus text, **always use a per
     echo; echo "--- staged diff ---"; git diff --cached
     echo; echo "--- unstaged diff ---"; git diff
     echo "=== END CHANGES ==="
-  } | agent -p --mode plan --model cursor-grok-4.6-high
+  } | agent -p --mode plan --trust --model cursor-grok-4.6-high
   ```
 
 - **Branch / base scope** (replace `<base>` with the resolved ref, default `main`): use the same pipeline but stream `git diff --name-status <base>...HEAD` and `git diff <base>...HEAD`, and word the heredoc as "the diff of HEAD against <base>".
-  - `--mode plan` keeps Cursor read-only. Use `timeout: 600000` on foreground runs. For `--background`, launch the pipeline with `run_in_background: true` and tell the user: "Cursor adversarial review started in the background." Do not wait for it in this turn.
+  - `--mode plan` keeps Cursor read-only. `--trust` is required on every headless run: without it the CLI stalls silently on the workspace-trust prompt — zero output until the timeout kills it. Use `timeout: 600000` on foreground runs. For `--background`, launch the pipeline with `run_in_background: true` and tell the user: "Cursor adversarial review started in the background." Do not wait for it in this turn.
   - If the user passed `--model <id>`, use it in place of `cursor-grok-4.6-high`.
 
 Present results:

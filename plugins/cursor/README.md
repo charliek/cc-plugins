@@ -8,7 +8,7 @@ This plugin drives the `agent` CLI directly in headless mode (`agent -p`) — th
 
 ### `/cursor:rescue [--background|--wait] [--resume|--fresh] [--read-only] [--model <id>] [task...]`
 
-Hand a substantial coding, debugging, or investigation task to the Cursor agent and return its output verbatim. Defaults to **write-capable** (`agent -p --force`), so Cursor can edit files and run commands; changes land in the repo and are reviewable with `git diff`. Use `--read-only` for diagnosis/research without edits. `--resume` continues the previous Cursor session; `--background` runs it as a Claude background task.
+Hand a substantial coding, debugging, or investigation task to the Cursor agent and return its output verbatim. Defaults to **write-capable** (`agent -p --force --trust`), so Cursor can edit files and run commands; changes land in the repo and are reviewable with `git diff`. Use `--read-only` for diagnosis/research without edits. `--resume` continues the previous Cursor session; `--background` runs it as a Claude background task.
 
 The bundled **`cursor-rescue`** subagent carries the same forwarding contract, so the main thread can also delegate to Cursor autonomously (via `subagent_type`) without the slash command.
 
