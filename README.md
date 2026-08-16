@@ -11,6 +11,7 @@ Shared Claude Code plugins for development workflows.
 | [deploy](plugins/deploy/) | Commands | `/deploy:build` for date-based releases that trigger Docker builds |
 | [planning](plugins/planning/) | Commands | `/planning:ask-codex`, `/planning:ask-glm`, `/planning:ask-coderabbit`, `/planning:ask-panel` for AI-powered plan review |
 | [cursor](plugins/cursor/) | Commands | `/cursor:rescue`, `/cursor:review`, `/cursor:adversarial-review` — delegate coding tasks and reviews to the Cursor agent CLI |
+| [codex-cli](plugins/codex-cli/) | Commands | `/codex-cli:rescue`, `/codex-cli:review`, `/codex-cli:adversarial-review` — delegate coding tasks and reviews directly to `codex exec` (brokerless, parallel-safe) |
 | [flutter-drive](plugins/flutter-drive/) | Skill | `flutter-drive:flutter-drive` — drive/debug/verify any StrideLabs Marionette-instrumented Flutter app over the Dart VM Service |
 | [flows](plugins/flows/) | Commands | `/flows:gauntlet` and `/flows:gated-commit` for end-to-end build flows (plan → panel review → gated commits → PR) |
 | [docs-workflows](plugins/docs-workflows/) | Skills | `docs-workflows:docs-setup` and `docs-workflows:docs-migrate` — stand up a Zensical docs site, or port one from Material for MkDocs |

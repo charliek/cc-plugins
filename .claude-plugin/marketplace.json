@@ -37,6 +37,12 @@
       "category": "development"
     },
     {
+      "name": "codex-cli",
+      "description": "Delegate coding tasks and code reviews to the Codex CLI (codex exec) from Claude Code — direct, brokerless, parallel-safe",
+      "source": "./plugins/codex-cli",
+      "category": "development"
+    },
+    {
       "name": "flutter-drive",
       "description": "Drive, debug, and visually verify any StrideLabs Marionette-instrumented Flutter app over the Dart VM Service: the app-agnostic driving rules, MSTATE/MRESULT contract, headless-login pattern, Marionette CLI reference, and a launch-script template for bootstrapping a new app's drive skill",
       "source": "./plugins/flutter-drive",

@@ -1,0 +1,7 @@
+{
+  "name": "codex-cli",
+  "description": "Delegate coding tasks and code reviews to the Codex CLI (codex exec) from Claude Code",
+  "author": {
+    "name": "charliek"
+  }
+}

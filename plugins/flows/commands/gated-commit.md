@@ -42,8 +42,8 @@ reference). If empty, derive it from the diff.
    Re-run the relevant gate subset after any applied fix.
 
 4. **Capped external review.** Run a review of the uncommitted diff with the
-   `codex:codex-rescue` agent (or `/codex:rescue`), prompted for CORRECTNESS
-   bugs (not style — simplify owns that). Scale the review's adversarialness
+   `codex-cli:codex-rescue` agent (or `/codex-cli:rescue --read-only`),
+   prompted for CORRECTNESS bugs (not style — simplify owns that). Scale the review's adversarialness
    to the gravity of the change: routine commits get a straightforward
    correctness pass; changes touching data integrity, auth/security, money,
    migrations, or concurrency get an explicitly adversarial prompt (assume
@@ -51,11 +51,14 @@ reference). If empty, derive it from the diff.
    include:
    - the spec/context for the change (plan section or `$ARGUMENTS`),
    - specific failure modes to hunt for, tailored to the diff,
-   - a **HARD CAP of 12 minutes** — instruct the agent to kill codex and
+   - a **HARD CAP of 10 minutes** — instruct the agent to kill codex and
      report partial output if it stalls past the cap. NEVER wait unbounded.
+     (10 minutes matches the Bash tool's maximum timeout, so the cap is
+     actually enforceable.)
 
-   If codex is unavailable or stalls past the cap, fall back to
-   `cursor:cursor-rescue` with the same prompt. If neither is installed, do a
+   If codex is unavailable, rate-limited, or stalls past the cap, fall back
+   to `cursor:cursor-rescue` with the same prompt — do NOT retry codex on a
+   rate limit (the retry hits the same quota). If neither is installed, do a
    careful self-review pass and note that in the commit message.
 
 5. **Disposition every finding.** For each review finding: fix it, or record
@@ -70,9 +73,14 @@ reference). If empty, derive it from the diff.
 
 ## Knowledge baked in (learned the hard way)
 
-- **Codex stall guard**: codex occasionally hangs; the 12-minute cap with a
-  cursor fallback is mandatory, and the cap goes INSIDE the reviewer
-  subagent's prompt so the subagent enforces it.
+- **Codex stall guard**: the 10-minute cap with a cursor fallback is
+  mandatory, and the cap goes INSIDE the reviewer subagent's prompt so the
+  subagent enforces it. It was 12 minutes historically, but the Bash tool's
+  maximum timeout is 10 — a longer cap silently wasn't enforceable. The `codex-cli` plugin drives `codex exec` directly
+  (no shared broker), which eliminated the silent stalls seen with the
+  official codex plugin's app-server broker — the cap stays because a big
+  diff can still legitimately run long. An empty review result is a
+  FAILURE, not "no findings" — fall back, never treat it as a pass.
 - **Simplify is complementary to the external review, not redundant**: in
   practice their finding sets don't overlap — the review finds bugs,
   simplify finds structure. That's why both stay, and why simplify is

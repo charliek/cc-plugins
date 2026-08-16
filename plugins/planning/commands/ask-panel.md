@@ -7,7 +7,7 @@ argument-hint: "[plan-file-path]"
 
 Run Codex, GLM 5.3, and CodeRabbit plan reviews in parallel, synthesize their feedback, and incorporate improvements. Three different AI reviewers provide broad coverage and high confidence in findings they agree on.
 
-- **Codex** (OpenAI) — reviews via `codex exec` (`gpt-5.6-sol` at high reasoning effort), explores the repo with `--full-auto`
+- **Codex** (OpenAI) — reviews via `codex exec` (`gpt-5.6-sol` at high reasoning effort), explores the repo read-only via `-s read-only`
 - **GLM 5.3** (Z.ai) — reviews via `opencode run`, proactively explores the repo
 - **CodeRabbit** — reviews via `coderabbit:code-reviewer` agent, reads repo files directly
 
@@ -55,7 +55,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    > ```bash
    > tmpdir=$(mktemp -d)
    > trap 'rm -rf "$tmpdir"' EXIT
-   > codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" --full-auto -o "$tmpdir/codex.txt" \
+   > codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" -s read-only -o "$tmpdir/codex.txt" \
    >   "Review the following implementation plan. Evaluate standalone readability, acceptance criteria, test coverage, and repo pattern alignment. Provide specific, actionable feedback organized by category.
    >
    >   ---BEGIN PLAN---
