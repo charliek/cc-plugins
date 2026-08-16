@@ -10,7 +10,7 @@ Submit a plan to Codex CLI (OpenAI) for review, running `gpt-5.6-sol` at high re
 
 ### `/planning:ask-glm [plan-file-path]`
 
-Submit a plan to GLM 5.2 (Z.ai) for review using opencode CLI. GLM proactively explores the repository to understand conventions before reviewing the plan.
+Submit a plan to GLM 5.3 (Z.ai) for review using opencode CLI. GLM proactively explores the repository to understand conventions before reviewing the plan.
 
 ### `/planning:ask-coderabbit [plan-file-path]`
 

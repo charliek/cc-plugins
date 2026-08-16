@@ -26,7 +26,7 @@ Check that the `agent` CLI is installed and authenticated, and report a readines
 
 ## Model selection
 
-All commands default to the **`cursor-grok-4.5-high`** model, set as a constant near the top of each command/subagent file (change it in one place). Override per call with `--model <id>`. Cursor encodes reasoning level in the model id (e.g. `cursor-grok-4.5-high`, `gpt-5.6-sol-high`) — there is no separate effort flag. Run `agent --list-models` to discover available ids.
+All commands default to the **`cursor-grok-4.6-high`** model, stated near the top of each command/subagent file (when bumping the default, update every command file plus this README). Override per call with `--model <id>`. Cursor encodes reasoning level in the model id (e.g. `cursor-grok-4.6-high`, `gpt-5.6-sol-high`) — there is no separate effort flag. Run `agent --list-models` to discover available ids.
 
 ## Prerequisites
 

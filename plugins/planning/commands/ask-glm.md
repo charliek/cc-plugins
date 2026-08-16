@@ -1,11 +1,11 @@
 ---
-description: Ask GLM 5.2 to review and challenge an implementation plan
+description: Ask GLM 5.3 to review and challenge an implementation plan
 argument-hint: "[plan-file-path]"
 ---
 
 # Ask GLM Command
 
-Submit an implementation plan to GLM 5.2 (via opencode + Z.ai) for review. GLM reads the plan, explores the repository to understand conventions, and provides feedback on completeness, acceptance criteria, test coverage, and architectural alignment.
+Submit an implementation plan to GLM 5.3 (via opencode + Z.ai) for review. GLM reads the plan, explores the repository to understand conventions, and provides feedback on completeness, acceptance criteria, test coverage, and architectural alignment.
 
 Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the active plan file from the current conversation context (typically in `~/.claude/plans/`).
 
@@ -38,7 +38,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    tmpdir=$(mktemp -d) && \
    echo "TMPDIR=$tmpdir" && \
    cat "<plan-file-path>" | opencode run \
-     -m "zai-coding-plan/glm-5.2" \
+     -m "zai-coding-plan/glm-5.3" \
      -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? Provide specific, actionable feedback organized by category." \
      > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"
    ```
