@@ -10,7 +10,7 @@ Run a read-only code review of local git changes through the Cursor `agent` CLI.
 Raw slash-command arguments:
 `$ARGUMENTS`
 
-Default model: `cursor-grok-4.6-high` (override with `--model <id>`; run `agent --list-models` for ids).
+Default model: `cursor-grok-4.6-high-fast` (override with `--model <id>`; run `agent --list-models` for ids).
 
 Core constraint:
 
@@ -51,7 +51,7 @@ Run the review:
     echo; echo "--- staged diff ---"; git diff --cached
     echo; echo "--- unstaged diff ---"; git diff
     echo "=== END CHANGES ==="
-  } | agent -p --mode plan --model cursor-grok-4.6-high
+  } | agent -p --mode plan --model cursor-grok-4.6-high-fast
   ```
 
 - **Branch / base scope** (replace `<base>` with the resolved ref, default `main`):
@@ -65,16 +65,20 @@ Run the review:
     echo; echo "--- changed files (vs <base>) ---"; git diff --name-status <base>...HEAD
     echo; echo "--- diff (vs <base>) ---"; git diff <base>...HEAD
     echo "=== END CHANGES ==="
-  } | agent -p --mode plan --model cursor-grok-4.6-high
+  } | agent -p --mode plan --model cursor-grok-4.6-high-fast
   ```
 
   - The heredoc body is fixed instruction text (no user-controlled input), so `CURSOR_REVIEW` is collision-safe here. The streamed diff cannot collide — it arrives after the heredoc closes.
   - `--mode plan` keeps Cursor read-only (it analyzes and may read files, but makes no edits).
   - Use `timeout: 600000` on foreground runs. For `--background`, launch this `Bash` pipeline with `run_in_background: true` and tell the user: "Cursor review started in the background." Do not wait for it in this turn.
-  - If the user passed `--model <id>`, use it in place of `cursor-grok-4.6-high`.
+  - If the user passed `--model <id>`, use it in place of `cursor-grok-4.6-high-fast`.
 
 Present results:
 
 - Return the Cursor agent's stdout verbatim. Present findings first, ordered by severity, with file paths and line numbers exactly as reported.
 - If there are no findings, say so explicitly and keep the residual-risk note brief.
 - **CRITICAL — stop before fixing:** After presenting the findings, STOP. Do not make any code changes or fix any issues. You MUST explicitly ask the user which issues, if any, they want fixed before touching a single file. Auto-applying fixes from a review is forbidden, even if a fix is obvious.
+
+## Failure handling
+
+An empty final response or a `resource_exhausted`/reconnect-loop failure from `agent` is a known transient Cursor-backend shape: retry the invocation ONCE with `--model auto` before reporting failure. Never present an empty run as "no findings". If one model id repeatedly fails while others work, re-check `agent --list-models` — pinned defaults can be delisted upstream.

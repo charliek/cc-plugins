@@ -10,7 +10,7 @@ Run an adversarial code review through the Cursor `agent` CLI. Frame it as a **c
 Raw slash-command arguments:
 `$ARGUMENTS`
 
-Default model: `cursor-grok-4.6-high` (override with `--model <id>`; run `agent --list-models` for ids).
+Default model: `cursor-grok-4.6-high-fast` (override with `--model <id>`; run `agent --list-models` for ids).
 
 Core constraint:
 
@@ -42,14 +42,18 @@ Because the heredoc body includes user-controlled focus text, **always use a per
     echo; echo "--- staged diff ---"; git diff --cached
     echo; echo "--- unstaged diff ---"; git diff
     echo "=== END CHANGES ==="
-  } | agent -p --mode plan --model cursor-grok-4.6-high
+  } | agent -p --mode plan --model cursor-grok-4.6-high-fast
   ```
 
 - **Branch / base scope** (replace `<base>` with the resolved ref, default `main`): use the same pipeline but stream `git diff --name-status <base>...HEAD` and `git diff <base>...HEAD`, and word the heredoc as "the diff of HEAD against <base>".
   - `--mode plan` keeps Cursor read-only. Use `timeout: 600000` on foreground runs. For `--background`, launch the pipeline with `run_in_background: true` and tell the user: "Cursor adversarial review started in the background." Do not wait for it in this turn.
-  - If the user passed `--model <id>`, use it in place of `cursor-grok-4.6-high`.
+  - If the user passed `--model <id>`, use it in place of `cursor-grok-4.6-high-fast`.
 
 Present results:
 
 - Return the Cursor agent's stdout verbatim, findings first, ordered by severity, with file paths and line numbers exactly as reported.
 - **CRITICAL — stop before fixing:** After presenting the findings, STOP. Do not make any code changes or fix any issues. You MUST explicitly ask the user which issues, if any, they want addressed before touching a single file.
+
+## Failure handling
+
+An empty final response or a `resource_exhausted`/reconnect-loop failure from `agent` is a known transient Cursor-backend shape: retry the invocation ONCE with `--model auto` before reporting failure. Never present an empty run as "no findings". If one model id repeatedly fails while others work, re-check `agent --list-models` — pinned defaults can be delisted upstream.
