@@ -2,15 +2,15 @@
 description: Run a Cursor agent review that challenges the implementation approach and design choices
 argument-hint: '[--wait|--background] [--base <ref>] [--scope auto|working-tree|branch] [--model <model>] [focus ...]'
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(agent:*), Bash(git:*), AskUserQuestion
+allowed-tools: Read, Glob, Grep, Bash(cursor-agent:*), Bash(git:*), AskUserQuestion
 ---
 
-Run an adversarial code review through the Cursor `agent` CLI. Frame it as a **challenge review** that questions the chosen implementation, design choices, tradeoffs, and assumptions — not just a stricter pass over implementation defects.
+Run an adversarial code review through the Cursor `cursor-agent` CLI. Frame it as a **challenge review** that questions the chosen implementation, design choices, tradeoffs, and assumptions — not just a stricter pass over implementation defects.
 
 Raw slash-command arguments:
 `$ARGUMENTS`
 
-Default model: `cursor-grok-4.6-high-fast` (override with `--model <id>`; run `agent --list-models` for ids).
+Default model: `cursor-grok-4.6-high` (override with `--model <id>`; run `cursor-agent --list-models` for ids).
 
 Core constraint:
 
@@ -42,12 +42,12 @@ Because the heredoc body includes user-controlled focus text, **always use a per
     echo; echo "--- staged diff ---"; git diff --cached
     echo; echo "--- unstaged diff ---"; git diff
     echo "=== END CHANGES ==="
-  } | agent -p --mode plan --model cursor-grok-4.6-high-fast
+  } | cursor-agent -p --mode plan --model cursor-grok-4.6-high
   ```
 
 - **Branch / base scope** (replace `<base>` with the resolved ref, default `main`): use the same pipeline but stream `git diff --name-status <base>...HEAD` and `git diff <base>...HEAD`, and word the heredoc as "the diff of HEAD against <base>".
   - `--mode plan` keeps Cursor read-only. Use `timeout: 600000` on foreground runs. For `--background`, launch the pipeline with `run_in_background: true` and tell the user: "Cursor adversarial review started in the background." Do not wait for it in this turn.
-  - If the user passed `--model <id>`, use it in place of `cursor-grok-4.6-high-fast`.
+  - If the user passed `--model <id>`, use it in place of `cursor-grok-4.6-high`.
 
 Present results:
 
@@ -56,4 +56,4 @@ Present results:
 
 ## Failure handling
 
-An empty final response or a `resource_exhausted`/reconnect-loop failure from `agent` is a known transient Cursor-backend shape: retry the invocation ONCE with `--model auto` before reporting failure. Never present an empty run as "no findings". If one model id repeatedly fails while others work, re-check `agent --list-models` — pinned defaults can be delisted upstream.
+An empty final response or a `resource_exhausted`/reconnect-loop failure from `cursor-agent` is a known transient Cursor-backend shape: retry the invocation ONCE with `--model cursor-grok-4.6-high-fast` (the priority-pool sibling; costlier, so backup-only) before reporting failure. Never present an empty run as "no findings". If one model id repeatedly fails while others work, re-check `cursor-agent --list-models` — pinned defaults can be delisted upstream.

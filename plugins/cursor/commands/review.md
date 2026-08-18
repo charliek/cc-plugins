@@ -2,15 +2,15 @@
 description: Run a Cursor agent code review against local git state
 argument-hint: '[--wait|--background] [--base <ref>] [--scope auto|working-tree|branch] [--model <model>]'
 disable-model-invocation: true
-allowed-tools: Read, Glob, Grep, Bash(agent:*), Bash(git:*), AskUserQuestion
+allowed-tools: Read, Glob, Grep, Bash(cursor-agent:*), Bash(git:*), AskUserQuestion
 ---
 
-Run a read-only code review of local git changes through the Cursor `agent` CLI.
+Run a read-only code review of local git changes through the Cursor `cursor-agent` CLI.
 
 Raw slash-command arguments:
 `$ARGUMENTS`
 
-Default model: `cursor-grok-4.6-high-fast` (override with `--model <id>`; run `agent --list-models` for ids).
+Default model: `cursor-grok-4.6-high` (override with `--model <id>`; run `cursor-agent --list-models` for ids).
 
 Core constraint:
 
@@ -51,7 +51,7 @@ Run the review:
     echo; echo "--- staged diff ---"; git diff --cached
     echo; echo "--- unstaged diff ---"; git diff
     echo "=== END CHANGES ==="
-  } | agent -p --mode plan --model cursor-grok-4.6-high-fast
+  } | cursor-agent -p --mode plan --model cursor-grok-4.6-high
   ```
 
 - **Branch / base scope** (replace `<base>` with the resolved ref, default `main`):
@@ -65,13 +65,13 @@ Run the review:
     echo; echo "--- changed files (vs <base>) ---"; git diff --name-status <base>...HEAD
     echo; echo "--- diff (vs <base>) ---"; git diff <base>...HEAD
     echo "=== END CHANGES ==="
-  } | agent -p --mode plan --model cursor-grok-4.6-high-fast
+  } | cursor-agent -p --mode plan --model cursor-grok-4.6-high
   ```
 
   - The heredoc body is fixed instruction text (no user-controlled input), so `CURSOR_REVIEW` is collision-safe here. The streamed diff cannot collide — it arrives after the heredoc closes.
   - `--mode plan` keeps Cursor read-only (it analyzes and may read files, but makes no edits).
   - Use `timeout: 600000` on foreground runs. For `--background`, launch this `Bash` pipeline with `run_in_background: true` and tell the user: "Cursor review started in the background." Do not wait for it in this turn.
-  - If the user passed `--model <id>`, use it in place of `cursor-grok-4.6-high-fast`.
+  - If the user passed `--model <id>`, use it in place of `cursor-grok-4.6-high`.
 
 Present results:
 
@@ -81,4 +81,4 @@ Present results:
 
 ## Failure handling
 
-An empty final response or a `resource_exhausted`/reconnect-loop failure from `agent` is a known transient Cursor-backend shape: retry the invocation ONCE with `--model auto` before reporting failure. Never present an empty run as "no findings". If one model id repeatedly fails while others work, re-check `agent --list-models` — pinned defaults can be delisted upstream.
+An empty final response or a `resource_exhausted`/reconnect-loop failure from `cursor-agent` is a known transient Cursor-backend shape: retry the invocation ONCE with `--model cursor-grok-4.6-high-fast` (the priority-pool sibling; costlier, so backup-only) before reporting failure. Never present an empty run as "no findings". If one model id repeatedly fails while others work, re-check `cursor-agent --list-models` — pinned defaults can be delisted upstream.
