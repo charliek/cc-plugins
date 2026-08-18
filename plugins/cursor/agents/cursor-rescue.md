@@ -22,14 +22,14 @@ Forwarding rules:
 - Default to a write-capable run. **Always use a per-invocation random delimiter** — append fresh random hex to the base token (shown here as `CURSOR_TASK_9f3a2b1c`) and never use the bare `CURSOR_TASK`. A unique suffix the caller cannot predict makes it impossible for the task text to terminate the heredoc early:
 
   ```bash
-  cursor-agent -p --force --model cursor-grok-4.6-high <<'CURSOR_TASK_9f3a2b1c'
+  cursor-agent -p --force --trust --model cursor-grok-4.6-high <<'CURSOR_TASK_9f3a2b1c'
   <task text exactly as the user gave it>
   CURSOR_TASK_9f3a2b1c
   ```
 
   - `-p` runs headless and prints the final response to stdout.
   - `--force` auto-approves file edits and shell commands so Cursor can complete the task without prompting. The run happens inside the current git repo, so changes are reviewable via `git diff`.
-  - If a run stalls on a workspace-trust prompt, add `--trust`.
+  - `--trust` is always on: a headless run cannot answer the workspace-trust prompt, and the stall it causes is invisible — zero output until the timeout kills the run. Trusting is safe here: the run always targets a repo the user is already working in, and write-capable runs auto-approve with `--force` anyway.
   - The quoted heredoc delimiter (`<<'CURSOR_TASK_…'`) disables all shell expansion of the body, and the random suffix makes it collision-safe even when the task text is inserted verbatim. Generate a fresh suffix for each invocation; use the same token for both the opener and the closer.
 - Use read-only mode (`--mode plan` instead of `--force`) only when the user explicitly wants review, diagnosis, or research without edits.
 - Set a generous timeout on the `Bash` call (use `timeout: 600000`, the maximum). Cursor tasks can run several minutes.
