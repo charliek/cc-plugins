@@ -43,6 +43,12 @@
       "category": "development"
     },
     {
+      "name": "grok",
+      "description": "Delegate coding tasks to the Grok CLI (grok -p) from Claude Code — headless, brokerless, parallel-safe",
+      "source": "./plugins/grok",
+      "category": "development"
+    },
+    {
       "name": "flutter-drive",
       "description": "Drive, debug, and visually verify any StrideLabs Marionette-instrumented Flutter app over the Dart VM Service: the app-agnostic driving rules, MSTATE/MRESULT contract, headless-login pattern, Marionette CLI reference, and a launch-script template for bootstrapping a new app's drive skill",
       "source": "./plugins/flutter-drive",
