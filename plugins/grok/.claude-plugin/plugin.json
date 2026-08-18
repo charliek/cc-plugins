@@ -1,0 +1,7 @@
+{
+  "name": "grok",
+  "description": "Delegate coding tasks to the Grok CLI (grok -p) from Claude Code — headless, brokerless, parallel-safe",
+  "author": {
+    "name": "charliek"
+  }
+}
