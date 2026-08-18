@@ -2,24 +2,24 @@
 description: Delegate investigation, an explicit fix request, or follow-up work to the Cursor agent CLI
 argument-hint: "[--background|--wait] [--resume|--fresh] [--read-only] [--model <model>] [what Cursor should investigate, solve, or continue]"
 context: fork
-allowed-tools: Bash(agent:*), AskUserQuestion
+allowed-tools: Bash(cursor-agent:*), AskUserQuestion
 ---
 
-Hand this request to the Cursor `agent` CLI and return its output verbatim.
+Hand this request to the Cursor `cursor-agent` CLI and return its output verbatim.
 
 Raw user request:
 $ARGUMENTS
 
-Default model: `cursor-grok-4.6-high` (override with `--model <id>`; run `agent --list-models` for ids).
+Default model: `cursor-grok-4.6-high` (override with `--model <id>`; run `cursor-agent --list-models` for ids).
 
-Build a single `agent` invocation. **Pass the task text via a quoted heredoc on stdin, never as an inline quoted argument** — this prevents `$(...)`, backticks, `$VAR`, quotes, and newlines in the task from being expanded by Bash. `agent -p` reads the prompt from stdin when no prompt argument is given.
+Build a single `cursor-agent` invocation. **Pass the task text via a quoted heredoc on stdin, never as an inline quoted argument** — this prevents `$(...)`, backticks, `$VAR`, quotes, and newlines in the task from being expanded by Bash. `cursor-agent -p` reads the prompt from stdin when no prompt argument is given.
 
 **Always use a per-invocation random delimiter** — append fresh random hex to the base token (shown below as `CURSOR_TASK_9f3a2b1c`) and never use the bare `CURSOR_TASK`. Because the suffix is unpredictable and unique per call, the task text can never match the delimiter and terminate the heredoc early, even though it is inserted verbatim. Use the same token for the opener and closer; generate a new one each invocation.
 
 Write-capable run (the default):
 
 ```bash
-agent -p --force --trust --model cursor-grok-4.6-high <<'CURSOR_TASK_9f3a2b1c'
+cursor-agent -p --force --trust --model cursor-grok-4.6-high <<'CURSOR_TASK_9f3a2b1c'
 <task text exactly as the user gave it, with routing flags stripped>
 CURSOR_TASK_9f3a2b1c
 ```
@@ -27,7 +27,7 @@ CURSOR_TASK_9f3a2b1c
 Read-only run (when `--read-only` is present, or the user only wants review/diagnosis/research without edits) — replace `--force` with `--mode plan`:
 
 ```bash
-agent -p --mode plan --trust --model cursor-grok-4.6-high <<'CURSOR_TASK_9f3a2b1c'
+cursor-agent -p --mode plan --trust --model cursor-grok-4.6-high <<'CURSOR_TASK_9f3a2b1c'
 <task text>
 CURSOR_TASK_9f3a2b1c
 ```
@@ -39,11 +39,11 @@ Flag handling (strip these from the task text before placing it in the heredoc b
 - `--read-only`: use `--mode plan` instead of `--force`.
 - `--model <id>`: use it in place of `cursor-grok-4.6-high`. There is no `--effort` flag — reasoning level is part of the model id.
 - `--resume`: add `--continue` (continue the previous Cursor session). `--fresh`: do not. If neither is given and the user is clearly continuing prior Cursor work ("continue", "keep going", "apply the top fix", "dig deeper"), add `--continue`; otherwise run fresh.
-- `--trust` is always on (it is in the invocations above, not optional): a headless run cannot answer the workspace-trust prompt, and the stall it causes is invisible — zero output until the timeout kills the run. Trusting is safe here: the run always targets a repo the user is already working in, and write-capable runs auto-approve with `--force` anyway.
+- `--trust` is always on: a headless run cannot answer the workspace-trust prompt, and the stall it causes is invisible — zero output until the timeout kills the run. Trusting is safe here: the run always targets a repo the user is already working in, and write-capable runs auto-approve with `--force` anyway.
 
 Output:
 
 - Return the Cursor agent's stdout verbatim. Do not paraphrase, summarize, rewrite, or add commentary before or after it.
 - By default the run is write-capable (`--force`), so Cursor may edit files and run commands. Changes land in the current git repo and are reviewable via `git diff`.
-- On failure, do **not** fabricate a substitute answer. If the call fails or `agent` cannot be invoked, report the failure concisely (most actionable stderr lines); if `agent` looks missing or unauthenticated, direct the user to `/cursor:setup`.
+- On failure, do **not** fabricate a substitute answer — but retry ONCE with `--model cursor-grok-4.6-high-fast` (the priority-pool sibling — costlier, hence backup-only) when the failure is empty stdout or a `resource_exhausted`/reconnect-loop error (the two known transient Cursor-backend shapes). If the retry also fails, report the failure concisely (most actionable stderr lines); if `cursor-agent` looks missing or unauthenticated, direct the user to `/cursor:setup`; if one model repeatedly fails while others work, suggest re-checking `cursor-agent --list-models` for a delisted id.
 - If the user did not supply a request, ask what Cursor should investigate or fix before running.
