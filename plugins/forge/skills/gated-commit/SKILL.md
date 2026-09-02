@@ -13,7 +13,8 @@ disable-model-invocation: true
 
 If `$ARGUMENTS` appears unsubstituted, the brief is the text typed after the slash command.
 
-1. If the spawn tool is unavailable, stop and tell the parent to run this skill.
+1. Follow `harness.md` spawn availability (Claude Code review/panel may
+   continue without spawn; gx/Cursor may not).
 2. Resolve and read `references/harness.md`, then `references/gated-commit.md` (and `references/simplify.md` if the simplify bar may fire).
 3. Detect the harness (`--harness` in `$ARGUMENTS` overrides).
 4. Execute the gated-commit procedure inline. Do not emit another slash command. Do not push unless asked.

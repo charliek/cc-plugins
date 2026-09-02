@@ -8,8 +8,11 @@ incorporate, report.
 
 Follow `plan.md` "When to write vs review":
 
-1. If `$ARGUMENTS` contains a file path (ignore a leading `--harness …`
-   token), expand `~`, resolve, verify with `test -f` — that is the plan.
+1. If `$ARGUMENTS` has a leading `--harness gx|cursor|claude`, strip it.
+   Treat the **entire remainder** as a plan path only when it is a single
+   path-shaped token (no spaces unless quoted as one path) that exists as a
+   file after `~` expansion (`test -f`). Otherwise it is a **scope brief**,
+   even if some word in it happens to match a filename.
 2. Else if a plan is already active in this conversation, use it.
 3. Else if the user asked to make a plan (brief in `$ARGUMENTS` or in this
    conversation), write one per `plan.md` and continue.
@@ -60,18 +63,24 @@ OpenRouter Sol is never a panel fallback. If ChatGPT-plan Sol fails, report that
 
 Check `codex --version` and `opencode --version`. Warn and skip a missing CLI. If none of the three can run, stop.
 
-**Sol** (if `codex` is available) — one Bash command, `timeout` 600000:
+**Sol** (if `codex` is available) — pipe the plan as **data**, never interpolate
+it into a double-quoted shell string. Set the shell-tool timeout to 600000 and
+kill the process at 600s (`perl -e 'alarm 600; exec @ARGV' --`). Trailing `-`
+reads stdin. `codex exec` is `-s read-only`.
 
 ```bash
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
-codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" -s read-only -o "$tmpdir/codex.txt" \
-  "Review the following implementation plan. Evaluate standalone readability, acceptance criteria, test coverage, and repo pattern alignment. Provide specific, actionable feedback organized by category.
-
-  ---BEGIN PLAN---
-  <paste full plan text here>
-  ---END PLAN---" \
-  2>"$tmpdir/stderr.txt"
+run_codex() { perl -e 'alarm 600; exec @ARGV' -- "$@"; }
+{
+  cat <<'EOF'
+Review the following implementation plan. Evaluate standalone readability, acceptance criteria, test coverage, and repo pattern alignment. Provide specific, actionable feedback organized by category.
+---BEGIN PLAN---
+EOF
+  cat -- "<plan-file-path>"
+  echo '---END PLAN---'
+} | run_codex codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" -s read-only \
+  -o "$tmpdir/codex.txt" - 2>"$tmpdir/stderr.txt"
 if [ $? -ne 0 ] || [ ! -s "$tmpdir/codex.txt" ]; then
   cat "$tmpdir/stderr.txt"
   exit 1
@@ -95,13 +104,16 @@ fi
 cat "$tmpdir/output.txt"
 ```
 
-Launch each of those as its own sonnet-class (`model: sonnet`) general-purpose
+Launch each of those as its own sonnet-class (`model: sonnet`) **`Explore`**
 subagent (`run_in_background: true`) that returns only the review text.
+`Explore` is read-only; do not use writable `general-purpose` for panel seats.
+The wrapper may run `codex`/`opencode` (those CLIs are `-s read-only` / stdin
+review) but must not edit the workspace.
 
 **CodeRabbit:** spawn `subagent_type: "coderabbit:code-reviewer"` with
 `model: sonnet` if the spawn tool accepts it (otherwise inherit), the full
-plan, and the shared review questions; ask it to read relevant repo files.
-If that agent type is missing, skip and say so.
+plan, and the shared review questions; ask it to read relevant repo files and
+**not** edit. If that agent type is missing, skip and say so.
 
 ## 4. Synthesize and incorporate
 

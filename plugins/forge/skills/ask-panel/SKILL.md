@@ -17,7 +17,7 @@ consumes the same file.
 
 If `$ARGUMENTS` appears unsubstituted, the brief is the text typed after the slash command.
 
-1. If the spawn tool is unavailable, stop and tell the parent to run this skill.
+1. Follow `harness.md` spawn availability.
 2. Resolve and read `references/harness.md`, then `references/plan.md` and
    `references/panel.md`.
 3. Detect the harness (`--harness` in `$ARGUMENTS` overrides).

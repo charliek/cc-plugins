@@ -20,7 +20,18 @@ If unresolvable, stop and report. If `${CLAUDE_PLUGIN_ROOT}` appears unsubstitut
 
 ## Spawn availability
 
-If the spawn tool (`task` / `Task` / `Agent` / `spawn_subagent`) is unavailable — typically because this skill was invoked inside a subagent — stop and tell the parent to run the skill. Never attempt the flow without subagents. gx forbids nested spawns.
+If the spawn tool (`task` / `Task` / `Agent` / `spawn_subagent`) is unavailable
+(typically because this skill was invoked inside a subagent):
+
+- **gx and Cursor:** stop and tell the parent to run the skill. Never attempt
+  those harnesses without subagents. gx forbids nested spawns.
+- **Claude Code:** continue if the path only needs `codex exec` / `opencode run`
+  (gated-commit review, Claude panel seats). Stop if the work needs implementers
+  or simplify (those still need spawn).
+
+Detect the harness before applying this guard when `--harness` is set; otherwise
+if spawn is missing and `codex` or `opencode` is on PATH, treat as Claude Code
+and continue only for review/panel paths.
 
 ## Detection (in order)
 
@@ -73,10 +84,27 @@ gx Sol effort is not settable per spawn. Recommend `[model."gpt-5.6-sol"].reason
 
 ## Plans directory
 
-**Write:** Cursor `~/.cursor/plans/<repo>/NNN-<slug>.md`; gx and Claude Code `~/.claude/plans/<repo>/NNN-<slug>.md`. Artifacts in the sibling `NNN-<slug>/`. A repo CLAUDE.md or AGENTS.md in-repo convention overrides this.
+**Write:** Cursor `~/.cursor/plans/<repo>/NNN-<slug>.md`; gx and Claude Code
+`~/.claude/plans/<repo>/NNN-<slug>.md`. Next free `NNN`. Artifacts in the sibling
+`NNN-<slug>/`. A repo CLAUDE.md or AGENTS.md in-repo convention overrides this.
 
-**Read** (ask-panel, gauntlet resume): explicit path first; otherwise search both trees that are readable and take the newest match, reporting which.
+**Multi-repo key:** one plan file, not one per repo. Write it under the
+**primary** repo: the first repo named in the brief, else the current working
+directory's repo. All workstreams and per-repo breakdowns live in that file;
+artifacts stay in that plan's sibling folder. Resume and ask-panel look up that
+same path. Each PR body links it.
+
+**Read** (ask-panel, gauntlet resume): explicit path first; otherwise search both
+trees that are readable and take the newest match, reporting which.
 
 ## Panel quorum
 
-"Panel-reviewed" requires ≥ 2 successful seats. With 1, record `degraded panel (1/3)` in the plan header and tell the user before implementation proceeds. A failed seat is reported with reason, never retried on the same quota, never silently dropped.
+"Panel-reviewed" requires ≥ 2 successful seats. A failed seat is reported with
+reason, never retried on the same quota, never silently dropped.
+
+- **0/3** seats ran or succeeded: the plan is **not** panel-reviewed. Do not
+  substitute a self-review as a pass. Stop before implementation (gauntlet) or
+  report failure (`ask-panel`).
+- **1/3:** record `degraded panel (1/3)` in the plan header and tell the user
+  before implementation proceeds.
+- **≥ 2/3:** panel-reviewed.

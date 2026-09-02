@@ -39,15 +39,28 @@ Spawn `explore` with `model: gpt-5.6-sol-high`. On auth/credit/rate-limit, empty
 
 ### Claude Code
 
-Direct `codex exec` (not the `codex-cli` agent). One Bash command, timeout 600000:
+Direct `codex exec` (not the `codex-cli` agent). One Bash command; set the
+shell-tool timeout to 600000 **and** wrap the process so a hang is killed at
+600s (portable: `perl -e 'alarm 600; exec @ARGV' --`; `timeout 600` if that
+binary exists). A timeout is a failed review route.
+
+The trailing `-` makes Codex read the piped bundle as the prompt. Put spec /
+`$ARGUMENTS`, tailored failure modes, and the 10-minute cap **in the bundle**
+(same context gx/Cursor reviewers get). Because that text is user-controlled,
+use a per-invocation random heredoc delimiter (shown as `REVIEW_9f3a2b1c`).
+Stream git output after the heredoc — do not interpolate the diff into the
+shell command.
 
 ```bash
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
+run_codex() { perl -e 'alarm 600; exec @ARGV' -- "$@"; }
 {
-  cat <<'REVIEW'
-Review the uncommitted working-tree changes below for CORRECTNESS bugs (not style). This is review-only — do not edit anything. Report concrete findings ordered by severity, each with file path and line number. Also read any untracked files listed (their contents follow). If you find nothing significant, say so. An empty result is a failure.
-REVIEW
+  cat <<'REVIEW_9f3a2b1c'
+Review the uncommitted working-tree changes below for CORRECTNESS bugs (not style). This is review-only — do not edit anything. HARD CAP: 10 minutes; return partial findings rather than hanging. Empty output is a failure, not "no findings." Spec/context for this commit:
+REVIEW_9f3a2b1c
+  # Agent: append the plan section or $ARGUMENTS and specific failure modes here
+  # (cat a file you wrote, or a second quoted heredoc with a fresh random delimiter).
   echo "=== BEGIN CHANGES ==="
   echo; echo "--- changed files ---"; git status --short --untracked-files=all
   echo; echo "--- staged diff ---"; git diff --cached
@@ -58,8 +71,8 @@ REVIEW
     cat -- "$f"
   done
   echo "=== END CHANGES ==="
-} | codex exec -s read-only -m gpt-5.6-sol -c model_reasoning_effort="high" \
-  -o "$tmpdir/review.txt" >"$tmpdir/stdout.txt" 2>"$tmpdir/stderr.txt"
+} | run_codex codex exec -s read-only -m gpt-5.6-sol -c model_reasoning_effort="high" \
+  -o "$tmpdir/review.txt" - >"$tmpdir/stdout.txt" 2>"$tmpdir/stderr.txt"
 status=$?
 if [ $status -ne 0 ] || [ ! -s "$tmpdir/review.txt" ]; then
   echo "codex exec review failed (exit $status). Last stderr/stdout:"

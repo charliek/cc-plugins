@@ -26,8 +26,9 @@ subagent itself — implementers, simplify reviewers, the fixer, the Sol
 reviewer, the panel seats. gx forbids nested spawns.
 
 **Do not emit slash commands** for panel, simplify, or gated-commit. Read
-those procedures from `references/` and run them inline. If the spawn tool is
-unavailable, stop and tell the parent to run this skill.
+those procedures from `references/` and run them inline. Follow `harness.md`
+spawn availability (gauntlet implementation always needs spawn; stop and tell
+the parent if it is missing).
 
 1. Resolve and read `references/harness.md`, then `references/plan.md`,
    `references/panel.md`, `references/simplify.md`, and
@@ -43,7 +44,8 @@ Read CLAUDE.md, then AGENTS.md, of every repo in scope. Derive:
 - verification tooling notes and gotchas
 
 The scope may span **multiple repos** — one PR per repo that changes. One
-plan covers the whole effort.
+plan covers the whole effort, stored under the **primary** repo key in
+`harness.md` (first repo named in the brief, else cwd).
 
 Plans and verification artifacts live **outside** the repos (see
 `harness.md` plans directory). Exception: honor an explicit in-repo
@@ -81,9 +83,9 @@ header.
 
 **Every plan goes through the panel**, including new or materially revised
 plans produced mid-flight, before implementation resumes against them.
-
-If the panel cannot run, self-review against the Phase-2 checklist and say
-the panel was skipped.
+Honor `harness.md` panel quorum: 0/3 → stop, do not implement; 1/3 → record
+`degraded panel (1/3)` and tell the user before continuing; ≥ 2/3 → proceed.
+Do not treat a self-review as a panel pass.
 
 ## Phase 4 — Implementation (gated units)
 

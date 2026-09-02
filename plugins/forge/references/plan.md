@@ -17,7 +17,8 @@ Do not ask for a path and stop when the user clearly wants a new plan.
 ## Write location
 
 Per `harness.md`: Cursor `~/.cursor/plans/<repo>/NNN-<slug>.md`; gx and
-Claude Code `~/.claude/plans/<repo>/NNN-<slug>.md`. Next free `NNN`. Artifacts
+Claude Code `~/.claude/plans/<repo>/NNN-<slug>.md`. Multi-repo scopes use the
+primary-repo key in `harness.md`. Next free `NNN`. Artifacts
 in the sibling `NNN-<slug>/`. Honor an in-repo convention if CLAUDE.md or
 AGENTS.md documents one. The plan stays out of git unless that convention
 says otherwise.
