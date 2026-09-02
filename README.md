@@ -16,6 +16,7 @@ Shared Claude Code plugins for development workflows.
 | [flutter-drive](plugins/flutter-drive/) | Skill | `flutter-drive:flutter-drive` — drive/debug/verify any StrideLabs Marionette-instrumented Flutter app over the Dart VM Service |
 | [flows](plugins/flows/) | Commands | `/flows:gauntlet` and `/flows:gated-commit` for end-to-end build flows (plan → panel review → gated commits → PR) |
 | [docs-workflows](plugins/docs-workflows/) | Skills | `docs-workflows:docs-setup` and `docs-workflows:docs-migrate` — stand up a Zensical docs site, or port one from Material for MkDocs |
+| [forge](plugins/forge/) | Skills (slash-only) | `/forge:gauntlet`, `/forge:gated-commit`, `/forge:simplify`, `/forge:ask-panel` — plan → PR flow for gx, Cursor, and Claude Code |
 
 ## Installation
 
@@ -31,11 +32,24 @@ Shared Claude Code plugins for development workflows.
 /plugin install flutter-drive@cc-plugins
 /plugin install flows@cc-plugins
 /plugin install docs-workflows@cc-plugins
+/plugin install forge@cc-plugins
 ```
+
+gx:
+
+```
+gx plugin marketplace add charliek/cc-plugins
+gx plugin install forge --trust
+```
+
+Cursor: install `forge` from the cc-plugins marketplace, or symlink
+`plugins/forge` to `~/.cursor/plugins/local/forge` and reload.
 
 ## Adding new plugins
 
 1. Create a directory under `plugins/<name>/`
 2. Add `.claude-plugin/plugin.json` with name, description, and author
-3. Add `commands/` for slash commands or `skills/` for model-invoked skills
+3. Add `commands/` for slash commands or `skills/` for skills. Skills may be
+   slash-only (`disable-model-invocation: true`); they are not required to be
+   model-invoked.
 4. Register in `.claude-plugin/marketplace.json`

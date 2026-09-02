@@ -1,0 +1,7 @@
+{
+  "name": "forge",
+  "description": "Cross-harness plan → PR flow: gauntlet, gated-commit, simplify, and ask-panel for gx, Cursor, and Claude Code",
+  "author": {
+    "name": "charliek"
+  }
+}
