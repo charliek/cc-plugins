@@ -24,9 +24,11 @@ If the spawn tool (`task` / `Task` / `Agent` / `spawn_subagent`) is unavailable 
 
 ## Detection (in order)
 
-1. **Cursor** — spawn tool is `Task` and `subagent_type` values are camelCase (`generalPurpose`, `explore`) and/or the question tool is `AskQuestion`.
-2. **gx** — spawn tool is `task` or `spawn_subagent` with kebab types (`general-purpose`, `explore`, `plan`) and `run_in_background` defaults true.
-3. **Claude Code** — spawn tool is `Agent` (or `Task`) with `general-purpose` and the question tool is `AskUserQuestion`.
+`--harness gx|cursor|claude` in the arguments overrides this list.
+
+1. **Cursor** — `subagent_type` values include camelCase `generalPurpose`, and/or the question tool is `AskQuestion` (not `AskUserQuestion`).
+2. **gx** — built-in types include kebab `general-purpose` **and** kebab `plan`, and/or the spawn tool's aliases include `spawn_subagent`. The advertised name may be `task` or `Task`; do not treat `Task` alone as Cursor.
+3. **Claude Code** — the spawn tool is `Agent`, and/or the question tool is `AskUserQuestion`.
 
 If none match, ask once via the question tool, then proceed.
 

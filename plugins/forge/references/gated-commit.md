@@ -46,12 +46,17 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 {
   cat <<'REVIEW'
-Review the uncommitted working-tree changes below for CORRECTNESS bugs (not style). This is review-only — do not edit anything. Report concrete findings ordered by severity, each with file path and line number. If you find nothing significant, say so. An empty result is a failure.
+Review the uncommitted working-tree changes below for CORRECTNESS bugs (not style). This is review-only — do not edit anything. Report concrete findings ordered by severity, each with file path and line number. Also read any untracked files listed (their contents follow). If you find nothing significant, say so. An empty result is a failure.
 REVIEW
   echo "=== BEGIN CHANGES ==="
   echo; echo "--- changed files ---"; git status --short --untracked-files=all
   echo; echo "--- staged diff ---"; git diff --cached
   echo; echo "--- unstaged diff ---"; git diff
+  echo; echo "--- untracked file contents ---"
+  git ls-files --others --exclude-standard | while IFS= read -r f; do
+    echo "===== $f ====="
+    cat -- "$f"
+  done
   echo "=== END CHANGES ==="
 } | codex exec -s read-only -m gpt-5.6-sol -c model_reasoning_effort="high" \
   -o "$tmpdir/review.txt" >"$tmpdir/stdout.txt" 2>"$tmpdir/stderr.txt"
@@ -64,7 +69,11 @@ fi
 cat "$tmpdir/review.txt"
 ```
 
-If codex is unavailable, rate-limited, empty, or past the cap: fall back to `cursor:cursor-rescue` with `--read-only` and the same prompt. Do not retry codex on a rate limit. If neither is installed, self-review and say so in the commit message.
+If codex is unavailable, rate-limited, empty, or past the cap: fall back to
+`cursor:cursor-rescue` with `--read-only` and the same prompt. Instruct that
+agent **not** to retry with a `…-fast` model (forge never uses fast slugs);
+one empty or failed run → self-review. Do not retry codex on a rate limit.
+If neither CLI is installed, self-review and say so in the commit message.
 
 ## 6. Disposition
 

@@ -87,9 +87,13 @@ fi
 cat "$tmpdir/output.txt"
 ```
 
-Launch each of those as its own general-purpose subagent (`run_in_background: true`) that returns only the review text.
+Launch each of those as its own sonnet-class (`model: sonnet`) general-purpose
+subagent (`run_in_background: true`) that returns only the review text.
 
-**CodeRabbit:** spawn `subagent_type: "coderabbit:code-reviewer"` with the full plan and the shared review questions; ask it to read relevant repo files. If that agent type is missing, skip and say so.
+**CodeRabbit:** spawn `subagent_type: "coderabbit:code-reviewer"` with
+`model: sonnet` if the spawn tool accepts it (otherwise inherit), the full
+plan, and the shared review questions; ask it to read relevant repo files.
+If that agent type is missing, skip and say so.
 
 ## 4. Synthesize and incorporate
 

@@ -133,14 +133,16 @@ Per repo that changed:
    accepted risks — and the plan in a collapsible `<details>` block.
    Cross-link sibling PRs. Recommend a **merge commit** (not squash) when
    units are meaningful standalone slices; `merge-pr` still asks the user.
-2. Run `git-commands:watch-pr` until CI is green. If that plugin is
-   missing, `gh pr checks` and say so.
+2. Watch CI until green. If `git-commands` is installed, **read** that
+   plugin's `watch-pr` command file and execute its steps inline (do not
+   emit `/watch-pr`). If it is missing, `gh pr checks --watch --fail-fast`
+   (or poll `gh pr checks` every 30s) and say so.
 3. Bot reviews: verify the bot actually reviewed (a rate-limited
    CodeRabbit can show as "pass" with no body). Fix each finding or reply
    with the disposition. Never silently ignore.
-4. **Default: leave the PR open.** Merge (`git-commands:merge-pr` or
-   `gh pr merge`) ONLY if the brief or plan explicitly requested
-   auto-merge.
+4. **Default: leave the PR open.** Merge by reading `merge-pr` and running
+   its steps inline (`gh pr merge`, or that plugin's procedure) ONLY if the
+   brief or plan explicitly requested auto-merge.
 5. **Never release/deploy** unless the brief says otherwise.
 
 ## Final status update
