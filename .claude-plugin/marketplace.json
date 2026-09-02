@@ -65,6 +65,12 @@
       "description": "Named end-to-end build flows: gauntlet (plan → panel review → gated commits → verification → one PR per repo) and the gated-commit inner loop",
       "source": "./plugins/flows",
       "category": "development"
+    },
+    {
+      "name": "forge",
+      "description": "Cross-harness plan → PR flow for gx, Cursor, and Claude Code: gauntlet, gated-commit, simplify, and ask-panel as slash-only skills",
+      "source": "./plugins/forge",
+      "category": "development"
     }
   ]
 }
