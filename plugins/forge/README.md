@@ -9,12 +9,14 @@ sessions that still want them.
 
 Model invocation is disabled; run them as slash commands.
 
-### `/forge:ask-panel [--harness gx|cursor|claude] [plan-file-path]`
+### `/forge:ask-panel [--harness gx|cursor|claude] [plan-file-path | scope brief]`
 
-Three-seat plan review. gx and Cursor spawn native `explore` subagents
-(Sol + Grok + GLM or Gemini). Claude Code keeps the existing shell-outs
-(Codex Sol, opencode GLM, CodeRabbit). Findings are synthesized and written
-back into the plan. "Panel-reviewed" needs ≥ 2 successful seats.
+Author a standalone plan (if none exists) and/or run a three-seat panel.
+gx and Cursor spawn native `explore` subagents (Sol + Grok + GLM or Gemini).
+Claude Code keeps the existing shell-outs (Codex Sol, opencode GLM,
+CodeRabbit). Findings are written back into the plan. The file is
+gauntlet-ready: same house style and write path. "Panel-reviewed" needs
+≥ 2 successful seats.
 
 ### `/forge:simplify [scope]`
 

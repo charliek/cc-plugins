@@ -1,13 +1,21 @@
 # Ask-panel procedure
 
-Run after reading `harness.md`. Locate a plan, make it review-ready, run three seats in parallel, synthesize, incorporate, report.
+Run after `harness.md` and `plan.md`. Once a plan file exists in house
+style, make it review-ready, run three seats in parallel, synthesize,
+incorporate, report.
 
-## 1. Locate the plan
+## 1. Locate or create the plan
 
-1. If `$ARGUMENTS` contains a file path (ignore a leading `--harness …` token), expand `~`, resolve, verify with `test -f`.
-2. Else use the active plan from this conversation.
-3. Else search both `~/.cursor/plans/<repo>/` and `~/.claude/plans/<repo>/` (whichever are readable) and take the newest `*.md`; report which path you used.
-4. If none, ask for a path and stop.
+Follow `plan.md` "When to write vs review":
+
+1. If `$ARGUMENTS` contains a file path (ignore a leading `--harness …`
+   token), expand `~`, resolve, verify with `test -f` — that is the plan.
+2. Else if a plan is already active in this conversation, use it.
+3. Else if the user asked to make a plan (brief in `$ARGUMENTS` or in this
+   conversation), write one per `plan.md` and continue.
+4. Else search both `~/.cursor/plans/<repo>/` and `~/.claude/plans/<repo>/`
+   (whichever are readable) and take the newest `*.md`; report which path.
+5. If still none, ask for a path or a brief and stop.
 
 ## 2. Readiness checklist
 

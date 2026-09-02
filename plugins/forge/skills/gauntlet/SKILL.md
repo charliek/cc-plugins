@@ -29,8 +29,9 @@ reviewer, the panel seats. gx forbids nested spawns.
 those procedures from `references/` and run them inline. If the spawn tool is
 unavailable, stop and tell the parent to run this skill.
 
-1. Resolve and read `references/harness.md`, then `references/panel.md`,
-   `references/simplify.md`, and `references/gated-commit.md`.
+1. Resolve and read `references/harness.md`, then `references/plan.md`,
+   `references/panel.md`, `references/simplify.md`, and
+   `references/gated-commit.md`.
 2. Detect the harness (`--harness` overrides).
 3. Execute the phases below.
 
@@ -67,26 +68,9 @@ decision is in scope, gather evidence now.
 
 ## Phase 2 — Plan
 
-Write the plan (Phase-0 location) in this shape:
-
-1. Problem / motivation
-2. Current state — verified this session, file:line refs
-3. Design decisions — PINNED; alternatives considered and why they lost
-4. Deviations / non-goals
-5. Work breakdown — **standalone units (U1..Un)**: each a complete vertical
-   slice (code + tests + docs) that builds and passes the gate alone.
-   Size guide for code: ~≤400 changed lines / ~≤10 files (not for
-   prose-only units). Merge boundaries that would yield scaffolding-only
-   or non-building intermediates. Each unit names its implementer tier
-   (sonnet-class default; opus-class if complex/subtle; fable-class only
-   for the single most critical piece) and its gate.
-6. File map
-7. Acceptance criteria — measurable, 1:1 with workstreams
-8. Verification plan
-9. Risks / open items / explicit future work
-
-For multi-repo scopes, group the work breakdown and acceptance criteria
-per repo.
+Write the plan (Phase-0 location) using `references/plan.md`. That file is
+the house style: required sections, standalone-unit rules, and write path.
+Do not duplicate it here. After the file exists, continue to Phase 3.
 
 ## Phase 3 — Panel review
 
