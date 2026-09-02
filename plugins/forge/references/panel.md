@@ -69,9 +69,11 @@ kill the process at 600s (`perl -e 'alarm 600; exec @ARGV' --`). Trailing `-`
 reads stdin. `codex exec` is `-s read-only`.
 
 ```bash
+set -o pipefail
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 run_codex() { perl -e 'alarm 600; exec @ARGV' -- "$@"; }
+test -f "<plan-file-path>" || exit 1
 {
   cat <<'EOF'
 Review the following implementation plan. Evaluate standalone readability, acceptance criteria, test coverage, and repo pattern alignment. Provide specific, actionable feedback organized by category.
@@ -91,9 +93,11 @@ cat "$tmpdir/codex.txt"
 **GLM** (if `opencode` is available) — pipe the plan via stdin; always use `--` before the message:
 
 ```bash
+set -o pipefail
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
-cat "<plan-file-path>" | opencode run \
+test -f "<plan-file-path>" || exit 1
+cat -- "<plan-file-path>" | opencode run \
   -m "zai-coding-plan/glm-5.3" \
   -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone? 2) Are acceptance criteria clear? 3) Does it include test coverage? 4) Does it match repo conventions? Provide specific, actionable feedback." \
   > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"
@@ -111,9 +115,10 @@ The wrapper may run `codex`/`opencode` (those CLIs are `-s read-only` / stdin
 review) but must not edit the workspace.
 
 **CodeRabbit:** spawn `subagent_type: "coderabbit:code-reviewer"` with
-`model: sonnet` if the spawn tool accepts it (otherwise inherit), the full
-plan, and the shared review questions; ask it to read relevant repo files and
-**not** edit. If that agent type is missing, skip and say so.
+`run_in_background: true`, `model: sonnet` if the spawn tool accepts it
+(otherwise inherit), the full plan, and the shared review questions; ask it
+to read relevant repo files and **not** edit. If that agent type is missing,
+skip and say so.
 
 ## 4. Synthesize and incorporate
 

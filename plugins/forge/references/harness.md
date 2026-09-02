@@ -23,15 +23,17 @@ If unresolvable, stop and report. If `${CLAUDE_PLUGIN_ROOT}` appears unsubstitut
 If the spawn tool (`task` / `Task` / `Agent` / `spawn_subagent`) is unavailable
 (typically because this skill was invoked inside a subagent):
 
+Detect the harness first (`--harness` override, then Detection below). Tool
+names and the question-tool identity remain usable even when spawn is blocked.
+
 - **gx and Cursor:** stop and tell the parent to run the skill. Never attempt
   those harnesses without subagents. gx forbids nested spawns.
 - **Claude Code:** continue if the path only needs `codex exec` / `opencode run`
   (gated-commit review, Claude panel seats). Stop if the work needs implementers
   or simplify (those still need spawn).
-
-Detect the harness before applying this guard when `--harness` is set; otherwise
-if spawn is missing and `codex` or `opencode` is on PATH, treat as Claude Code
-and continue only for review/panel paths.
+- **Uncertain:** fail closed. Do not infer Claude Code from `codex` or
+  `opencode` on PATH — gx and Cursor sessions often have those CLIs too. Ask
+  once, or require `--harness claude`.
 
 ## Detection (in order)
 
