@@ -59,8 +59,9 @@ file and redirect it instead — `codex exec … -o "$tmpdir/review.txt" - < "$t
 is equally expansion-safe. If a guard rejects the wrapper shape (`perl -e … exec`,
 `bash -c`), drop it: the shell tool's own 600000 timeout is the cap, and on overrun kill
 the run by matching its unique `$tmpdir` in the command line — never a blanket
-`pkill -f 'codex exec'`, which also kills concurrent rescues. Kill it you
-must: the leftover process keeps holding the thread, so `codex exec resume`
+`pkill -f 'codex exec'`, which also kills concurrent rescues. `echo "$tmpdir"`
+before launching, or a timeout leaves you without the value to match. Kill it
+you must: the leftover process keeps holding the thread, so `codex exec resume`
 then fails with `thread already has an active writer`. Rerun fresh and
 narrowed rather than resuming.
 

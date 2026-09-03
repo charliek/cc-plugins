@@ -36,10 +36,10 @@ Each headless run returns a `sessionId` in `--output-format json` (the plugin pr
 
 ## Known gotchas
 
-- `--sandbox read-only` needs a container runtime, and Grok refuses to start
-  when `/var/run/docker.sock` is a **symlink** (the Docker Desktop layout on
-  macOS). When that bites, a read-only Grok run is unavailable — use another
-  reviewer rather than dropping the read-only requirement.
+- `--sandbox read-only` has been seen to refuse to start when
+  `/var/run/docker.sock` is a **symlink** (the Docker Desktop layout). When
+  that bites, a read-only Grok run is unavailable — use another reviewer
+  rather than dropping the read-only requirement.
 
 ## Prerequisites
 

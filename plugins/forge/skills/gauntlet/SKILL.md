@@ -100,7 +100,8 @@ Code: `isolation: "worktree"`) and hand back a patch (`git add -N .;
 git diff > x.patch`) for the orchestrator to apply. A subagent inherits the
 session's worktree pin and cannot `cd` or `git -C` into a worktree you made
 by hand — it silently falls back to editing the shared tree alongside its
-sibling. Isolated worktrees branch from `origin/main`, so use them only for
+sibling. An isolated worktree branches from `origin/<default-branch>` unless
+the harness is configured to branch from HEAD, so by default use them only for
 units independent of the branch's unmerged work.
 
 Every implementer brief says **"run the gate synchronously, in the

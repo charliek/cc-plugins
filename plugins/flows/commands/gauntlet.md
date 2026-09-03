@@ -126,8 +126,9 @@ grouped per repo, since each repo becomes its own PR.
   git diff > x.patch`) for the orchestrator to apply and commit. A subagent
   inherits the session's worktree pin, so it cannot `cd` or `git -C` into a
   worktree you made by hand — it will silently fall back to editing the
-  shared tree alongside its sibling. Isolated worktrees branch from
-  `origin/main`, so use them only for commits independent of the branch's
+  shared tree alongside its sibling. An isolated worktree branches from
+  `origin/<default-branch>` unless the harness is configured to branch from
+  HEAD, so by default use them only for commits independent of the branch's
   unmerged work.
 - Verify each commit's user-visible behavior as you go, using the tooling
   the plan's verification section chose (artifacts into the plan's artifact

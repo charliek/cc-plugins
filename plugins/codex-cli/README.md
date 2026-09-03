@@ -35,9 +35,10 @@ All commands pin **`gpt-5.6-sol`** at **`model_reasoning_effort="high"`**, state
 - **Never let Codex derive a big diff itself.** Past ~900 changed lines, a
   Codex told to review "the current changes" runs `git diff` at
   `--unified=999999`, dumps ~30k lines, and hits the 10-minute cap without a
-  verdict. Write the diff to a file first (`git diff > /tmp/x.diff`; `git add -N`
-  for new files so they appear), and tell it: read this file first, do NOT run
-  `git diff`, then read only the named functions with narrow line ranges.
+  verdict. Write the diff to a file first (`git diff > /tmp/x-<unique>.diff` —
+  parallel rescues are the norm here; `git add -N` for new files so they
+  appear), and tell it: read this file first, do NOT run `git diff`, then read
+  only the named functions with narrow line ranges.
 - **Budget the run in the prompt**: "at most N minutes and M file reads; print
   the report and stop." Pair it with a fixed per-item verdict format — either
   `no issue — why, file:line` or a finding with `file:line` plus the concrete
@@ -49,8 +50,11 @@ All commands pin **`gpt-5.6-sol`** at **`model_reasoning_effort="high"`**, state
 - **A killed run leaves the thread locked.** The `codex exec` process outlives
   the cap kill and keeps the thread, so `codex exec resume <id>` then fails
   with `thread already has an active writer`. Kill the leftover process (match
-  the run's own `$tmpdir` in the command line, not every `codex exec`) and
-  rerun a fresh, narrowed prompt — that beat resuming every time.
+  the run's own `$tmpdir` in the command line, not every `codex exec`, so
+  concurrent rescues survive) and rerun a fresh, narrowed prompt — that beat
+  resuming every time. `echo "$tmpdir"` **before** launching `codex exec`: on a
+  timeout the partial output is all you get, and without it you never learn the
+  value to match.
 - **Long or generated prompts go in as a file**: `codex exec … -o /tmp/out.txt - < prompt.txt`
   is as expansion-safe as a quoted heredoc and survives command guards that
   reject heredocs. It needs a file-writing tool, so the rescue command and
