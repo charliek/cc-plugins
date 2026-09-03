@@ -93,7 +93,20 @@ Per changed repo: one feature branch (`feature/plan-NNN-<slug>`), one PR,
 many standalone commits.
 
 For each planned unit: spawn an implementer subagent with the plan section
-as spec (subagent does NOT commit; writable type; `isolation` omitted).
+as spec (subagent does NOT commit; writable type). Sequential implementers
+edit the branch tree directly (`isolation` omitted). **Never two implementers
+in one tree**: parallel ones each need their own isolated worktree (Claude
+Code: `isolation: "worktree"`) and hand back a patch (`git add -N .;
+git diff > x.patch`) for the orchestrator to apply. A subagent inherits the
+session's worktree pin and cannot `cd` or `git -C` into a worktree you made
+by hand — it silently falls back to editing the shared tree alongside its
+sibling. Isolated worktrees branch from `origin/main`, so use them only for
+units independent of the branch's unmerged work.
+
+Every implementer brief says **"run the gate synchronously, in the
+foreground"** — subagents that background a long gate report success before
+it finishes.
+
 Then run the gated-commit procedure inline. Verify user-visible behavior as
 you go (artifacts into the plan's artifact folder). If the implementer
 deviates from the plan, fix the code or amend the plan — never leave them

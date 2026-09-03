@@ -34,6 +34,7 @@ Estimate size, then choose execution mode:
   - `Wait for results`
   - `Run in background`
   - Recommend waiting only when the change is clearly tiny (~1-2 files, no directory-sized change); otherwise recommend background.
+- Size also picks the command: `codex exec review` discovers the diff itself, and past ~900 changed lines that discovery alone (`git diff` at `--unified=999999`) can burn the whole 10-minute cap without producing a verdict. For diffs that big, use `/codex-cli:adversarial-review` instead — it feeds the diff in and can hand Codex a diff *file* (see its large-diff bullet). Say why you switched.
 
 Run the review:
 

@@ -117,6 +117,18 @@ grouped per repo, since each repo becomes its own PR.
   `/flows:gated-commit` for the gate → conditional simplify → capped review
   → commit loop. Review intensity scales with the gravity of the change
   (see gated-commit).
+- Every implementer brief says **"run the gate synchronously, in the
+  foreground"** — subagents that background a long gate report success before
+  it has finished.
+- **Never two implementers in one tree.** Sequential implementers edit the
+  branch tree directly (no isolation). Parallel ones each need the `Agent`
+  tool's `isolation: "worktree"` and hand back a patch (`git add -N .;
+  git diff > x.patch`) for the orchestrator to apply and commit. A subagent
+  inherits the session's worktree pin, so it cannot `cd` or `git -C` into a
+  worktree you made by hand — it will silently fall back to editing the
+  shared tree alongside its sibling. Isolated worktrees branch from
+  `origin/main`, so use them only for commits independent of the branch's
+  unmerged work.
 - Verify each commit's user-visible behavior as you go, using the tooling
   the plan's verification section chose (artifacts into the plan's artifact
   folder) — catching a behavior miss at commit time is far cheaper than at

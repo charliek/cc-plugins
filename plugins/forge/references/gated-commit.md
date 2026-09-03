@@ -8,9 +8,13 @@ Run after reading `harness.md` (and `simplify.md` when the simplify bar fires). 
 
 Read CLAUDE.md, then AGENTS.md, for the per-commit gate (lint / test / build). If neither defines one, derive it from Makefile / package.json / CI and say which commands you chose. Typical shape: `make lint && make test && <frontend build if present>`.
 
+Read CI even when CLAUDE.md defines a gate: grep the workflow for build/test invocations the documented targets don't cover (feature-gated or per-crate/per-package steps especially) and add the ones covering the code you touched. A CI-only feature build caught an exhaustive-match break the whole local gate missed.
+
 ## 2. Run the gate
 
 All gate commands must pass before anything else. Fix failures in the diff's own code; do not weaken tests to pass them.
+
+Test-bearing diffs: rebuild before running (a stale binary passes vacuously), and give every new or converted functional test a negative control — break the expectation, watch it fail on that exact line, restore. An assertion never seen red is not evidence.
 
 ## 3. Conditional simplify
 
@@ -20,6 +24,8 @@ Run the simplify procedure (read `simplify.md`, execute inline — do not emit `
 
 Build the review bundle (status, staged, unstaged, untracked contents) and paste it into the reviewer prompt. gx `explore` has no shell.
 
+Past ~900 changed lines, do not paste the diff: write it to a file (`git add -N .` first so new files appear) and name that path in the prompt, for any reviewer that can read files. Either way the prompt says: do NOT run `git diff` or re-derive the changes; read only the named functions, with narrow line ranges; stay inside a stated read budget. A reviewer left to discover a big diff dumps tens of thousands of lines and hits the cap with no verdict.
+
 ## 5. Sol-first correctness review (read-only)
 
 Prompt for CORRECTNESS bugs, not style (simplify owns that). Scale adversarialness to gravity: routine commits get a straightforward pass; changes touching data integrity, auth/security, money, migrations, or concurrency get an explicitly adversarial prompt (assume the diff is wrong; hunt for the exploit/corruption path). Include:
@@ -28,6 +34,9 @@ Prompt for CORRECTNESS bugs, not style (simplify owns that). Scale adversarialne
 - specific failure modes tailored to the diff
 - a **HARD CAP of 10 minutes** — wait then kill; never wait unbounded
 - empty output is a FAILURE, not "no findings"
+- a fixed per-item verdict format: `no issue — why, file:line`, or a finding with `file:line` plus the concrete failure scenario; plus the list of files + line ranges the reviewer actually read
+
+Skip this review entirely for docs-only diffs and record `review: skipped (docs-only)` in the commit message — there is no correctness surface to find.
 
 ### gx
 
@@ -42,7 +51,18 @@ Spawn `explore` with `model: gpt-5.6-sol-high`. On auth/credit/rate-limit, empty
 Direct `codex exec` (not the `codex-cli` agent). One Bash command; set the
 shell-tool timeout to 600000 **and** wrap the process so a hang is killed at
 600s (portable: `perl -e 'alarm 600; exec @ARGV' --`; `timeout 600` if that
-binary exists). A timeout is a failed review route.
+binary exists — macOS ships neither `timeout` nor `gtimeout`). A timeout is a
+failed review route.
+
+If a command guard also rejects heredocs, build the prompt + bundle into a
+file and redirect it instead — `codex exec … -o "$tmpdir/review.txt" - < "$tmpdir/prompt.txt"`
+is equally expansion-safe. If a guard rejects the wrapper shape (`perl -e … exec`,
+`bash -c`), drop it: the shell tool's own 600000 timeout is the cap, and on overrun kill
+the run by matching its unique `$tmpdir` in the command line — never a blanket
+`pkill -f 'codex exec'`, which also kills concurrent rescues. Kill it you
+must: the leftover process keeps holding the thread, so `codex exec resume`
+then fails with `thread already has an active writer`. Rerun fresh and
+narrowed rather than resuming.
 
 The trailing `-` makes Codex read the piped bundle as the prompt. Put spec /
 `$ARGUMENTS`, tailored failure modes, and the 10-minute cap **in the bundle**
@@ -86,11 +106,20 @@ If codex is unavailable, rate-limited, empty, or past the cap: fall back to
 `cursor:cursor-rescue` with `--read-only` and the same prompt. Instruct that
 agent **not** to retry with a `…-fast` model (forge never uses fast slugs);
 one empty or failed run → self-review. Do not retry codex on a rate limit.
-If neither CLI is installed, self-review and say so in the commit message.
+CodeRabbit's CLI, if installed, is the other route and a real complement —
+`coderabbit review --agent --uncommitted --include-untracked -c <instructions>.md`
+found a contract bug (a counter bumped only on the success path) that codex
+and self-review both missed; prefer it when a sandboxed CLI reviewer refuses
+to start at all. If no external reviewer runs, self-review and say so in the
+commit message.
 
 ## 6. Disposition
 
 For each finding: fix it, or record WHY it is skipped (pre-existing, deliberate house pattern, plan-pinned). Never drop a finding silently. Re-run the gate after fixes.
+
+Check a proposed fix against the plan's pinned decisions before applying it — reviewers routinely "fix" a deliberate choice back to the default. A reviewer's "no issue" does not close an item you already flagged: record both views; the disagreement is the disposition.
+
+Before deleting or renaming a public name in a test helper or shared module, grep for importers (`from X import`, `use crate::…`). A sibling module importing a deleted name breaks collection for every lane — including one that only *deselects* that module, since `-m 'not marker'` still imports it.
 
 If every review route failed and there is no recorded self-review, **do not commit**.
 

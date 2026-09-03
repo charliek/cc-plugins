@@ -34,6 +34,13 @@ Each headless run returns a `sessionId` in `--output-format json` (the plugin pr
 - `--resume` with no UUID: `grok -c` (newest session in this working directory). **Races** if another Grok run is in flight here — use `--fresh` or restated context instead.
 - `--fresh`: always start a new session, even if the request sounds like a follow-up.
 
+## Known gotchas
+
+- `--sandbox read-only` needs a container runtime, and Grok refuses to start
+  when `/var/run/docker.sock` is a **symlink** (the Docker Desktop layout on
+  macOS). When that bites, a read-only Grok run is unavailable — use another
+  reviewer rather than dropping the read-only requirement.
+
 ## Prerequisites
 
 - The Grok CLI installed: `curl -fsSL https://x.ai/cli/install.sh | bash`.

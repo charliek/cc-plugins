@@ -32,10 +32,11 @@ Use `$ARGUMENTS` as an optional PR number. If not provided, use the PR associate
    - Determine the fix from the logs and CI config — do not hardcode any CI job names or language-specific commands
    - Run equivalent local checks to verify the fix before pushing
    - Commit the fix, push, and go back to step 2 to re-watch
+   - To retry an infra flake rather than fix code: `gh run rerun <run-id> --failed` is **refused while the run is still in progress** — wait for the run to settle first
    - **Circuit breaker**: If the same check fails a second time after a fix attempt, stop and ask the user for guidance instead of continuing to retry
 
 5. **Wait for bot review**: Check for bot review tools
-   - Look at the PR checks for any bot review tool (e.g. CodeRabbit)
+   - Look at the PR checks for any bot review tool (e.g. CodeRabbit, Greptile) — **more than one may review**, so check each for an actual body; a "pass" check with no review body is not a review
    - If no bot review tool is detected, skip to step 7
    - Poll for review comments using `gh pr view <number> --json reviews,comments`.
      CodeRabbit typically completes within a few minutes; if no review
@@ -50,9 +51,12 @@ Use `$ARGUMENTS` as an optional PR number. If not provided, use the PR associate
      before responding.
 
 6. **Handle review comments**: Evaluate and address feedback
-   - Read the review comments from the PR
+   - Read the review comments from the PR; read one comment in full with `gh api repos/{owner}/{repo}/pulls/comments/<id>`
    - Evaluate each comment: fix comments that point out real improvements (bugs, correctness, meaningful quality issues)
+   - Verify a suggested fix against the change's own pinned decisions before applying it — a reviewer will happily "fix" a deliberate choice back to the default
+   - Reply on the thread with `gh api --method POST repos/{owner}/{repo}/pulls/<pr>/comments/<id>/replies -f body=…` so the disposition lands where the finding is
    - Skip nitpicks, style-only suggestions, and comments that don't improve the code
+   - Editing the PR body (`gh pr edit --body-file`) overwrites CodeRabbit's appended summary — harmless, it re-adds it on the next review, but don't mistake it for the bot retracting anything
    - If changes were made, commit, push, and go back to step 2 to re-watch
    - If no changes were needed, move to step 7
 
