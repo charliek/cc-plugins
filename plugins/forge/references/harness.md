@@ -62,7 +62,7 @@ This table is the user's direct request for per-role models — always pass `mod
 
 ## Spawn recipes
 
-**Writable** (implementers, simplify fixer): type `general-purpose` / `generalPurpose`. Omit `isolation` (shared workspace; parent must see the edits).
+**Writable** (implementers, simplify fixer): type `general-purpose` / `generalPurpose`. Omit `isolation` for sequential work (shared workspace; parent must see the edits). Parallel implementers are the exception — never two in one tree; gauntlet Phase 4 has the per-harness isolation rule.
 
 **Read-only** (reviewers, panel seats): type `explore`. Paste the material to review inline in the prompt (full plan text; `git diff` / `git diff --cached` / untracked file contents). gx `explore` has read/list/search only — no shell — so never ask it to discover the diff itself.
 
