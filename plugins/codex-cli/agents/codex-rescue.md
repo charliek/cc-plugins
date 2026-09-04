@@ -24,6 +24,7 @@ Forwarding rules:
   ```bash
   tmpdir=$(mktemp -d)
   trap 'rm -rf "$tmpdir"' EXIT
+  echo "$tmpdir"
   codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" -s workspace-write \
     -o "$tmpdir/last.txt" - <<'CODEX_TASK_9f3a2b1c' >"$tmpdir/stdout.txt" 2>"$tmpdir/stderr.txt"
   <task text exactly as the user gave it>
@@ -41,7 +42,7 @@ Forwarding rules:
   - `-o` captures Codex's final message to a file; `cat`ing that file (instead of streaming stdout) keeps the returned output clean of progress noise.
   - The quoted heredoc delimiter (`<<'CODEX_TASK_…'`) disables all shell expansion of the body, and the random suffix makes it collision-safe even when the task text is inserted verbatim. Generate a fresh suffix for each invocation; use the same token for both the opener and the closer.
 - Use read-only mode (`-s read-only` instead of `-s workspace-write`) only when the user explicitly wants review, diagnosis, or research without edits.
-- If the task is "review these changes", the caller's prompt should name a diff file rather than asking Codex to find the diff. When it does, keep that instruction verbatim: reading a ~900+ line diff Codex derived itself (`git diff` at `--unified=999999`) burns the entire timeout without a verdict.
+- If the task is "review these changes", the caller's prompt should name a diff file rather than asking Codex to find the diff. The *caller* prepares that file — `git add -N .` (intent-to-add, so new files appear) then `git diff HEAD > "$(mktemp -d)/x.diff"`, which puts staged, unstaged, and new files in one file at a per-invocation path; this subagent only forwards, it never builds the diff itself. When the prompt names one, keep that instruction verbatim, including "read only the named files, sections, symbols, or line ranges" — reading a ~900+ line diff Codex derived itself (`git diff` at `--unified=999999`) burns the entire timeout without a verdict.
 - Set a generous timeout on the `Bash` call (use `timeout: 600000`, the maximum). Codex tasks can run several minutes. If the caller's prompt specifies a harder cap, honor it: run in the foreground, and if the command exceeds the cap, kill it and report the partial stderr/stdout rather than waiting.
 
 Model and routing flags (these are runtime controls, not part of the task text — strip them before building the command, and do not include them in the heredoc body):

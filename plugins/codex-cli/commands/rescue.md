@@ -21,6 +21,7 @@ Write-capable run (the default):
 ```bash
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
+echo "$tmpdir"
 codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" -s workspace-write \
   -o "$tmpdir/last.txt" - <<'CODEX_TASK_9f3a2b1c' >"$tmpdir/stdout.txt" 2>"$tmpdir/stderr.txt"
 <task text exactly as the user gave it, with routing flags stripped>
@@ -36,7 +37,7 @@ cat "$tmpdir/last.txt"
 
 Read-only run (when `--read-only` is present, or the user only wants review/diagnosis/research without edits) — replace `-s workspace-write` with `-s read-only`.
 
-If the task is "review these changes", the request should already name a diff file the caller wrote (at a unique path — parallel rescues are the norm here); keep that instruction verbatim in the heredoc, along with: read that file first, do NOT run `git diff`, then read only the named functions with narrow line ranges, budget N minutes and at most M file reads, print the report and stop. A Codex that derives a ~900+ line diff itself can burn the entire timeout without a verdict. This command only forwards — it does not build the diff file itself.
+If the task is "review these changes", the request should already name a diff file the caller wrote — `git add -N .` (intent-to-add, so new files appear) then `git diff HEAD > "$(mktemp -d)/x.diff"`, which puts staged, unstaged, and new files in one file at a per-invocation path (parallel rescues are the norm here). Keep that instruction verbatim in the heredoc, along with: read that file first, do NOT run `git diff`, then read only the named files, sections, symbols, or line ranges, budget N minutes and at most M file reads, print the report and stop. A Codex that derives a ~900+ line diff itself can burn the entire timeout without a verdict. This command only forwards — it does not build the diff file itself.
 
 Flag handling (strip these from the task text before placing it in the heredoc body — they are controls, not part of the prompt):
 

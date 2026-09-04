@@ -35,10 +35,13 @@ All commands pin **`gpt-5.6-sol`** at **`model_reasoning_effort="high"`**, state
 - **Never let Codex derive a big diff itself.** Past ~900 changed lines, a
   Codex told to review "the current changes" runs `git diff` at
   `--unified=999999`, dumps ~30k lines, and hits the 10-minute cap without a
-  verdict. Write the diff to a file first (`git diff > /tmp/x-<unique>.diff` —
-  parallel rescues are the norm here; `git add -N` for new files so they
-  appear), and tell it: read this file first, do NOT run `git diff`, then read
-  only the named functions with narrow line ranges.
+  verdict. Write the diff to a file first — `git add -N .` (intent-to-add, so
+  new files appear) then `git diff HEAD > "$(mktemp -d)/x.diff"`, which puts
+  staged, unstaged, and new files in one file at a per-invocation path
+  (parallel rescues are the norm here; a predictable shared `/tmp/x.diff` gets
+  clobbered mid-run). Then tell it: read this file first, do NOT run
+  `git diff`, then read only the named files, sections, symbols, or line
+  ranges you need.
 - **Budget the run in the prompt**: "at most N minutes and M file reads; print
   the report and stop." Pair it with a fixed per-item verdict format — either
   `no issue — why, file:line` or a finding with `file:line` plus the concrete

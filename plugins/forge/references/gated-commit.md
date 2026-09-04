@@ -24,7 +24,7 @@ Run the simplify procedure (read `simplify.md`, execute inline — do not emit `
 
 Build the review bundle (status, staged, unstaged, untracked contents) and paste it into the reviewer prompt. gx `explore` has no shell.
 
-Past ~900 changed lines, do not paste the diff: write it to a file (`git add -N .` first so new files appear) and name that path in the prompt, for any reviewer that can read files. Either way the prompt says: do NOT run `git diff` or re-derive the changes; read only the named functions, with narrow line ranges; stay inside a stated read budget. A reviewer left to discover a big diff dumps tens of thousands of lines and hits the cap with no verdict.
+Past ~900 changed lines, do not paste the diff: write it to a file and name that path in the prompt, for any reviewer that can read files. Prepare it with `git add -N . && git diff HEAD > "$(mktemp -d)/x.diff"` — the intent-to-add pulls in new files, `HEAD` captures staged and unstaged together so a partially staged tree isn't half reviewed, and the `mktemp -d` path is per-invocation so parallel reviews never clobber each other. Either way the prompt says: do NOT run `git diff` or re-derive the changes; read only the named files, sections, symbols, or line ranges; stay inside a stated read budget. A reviewer left to discover a big diff dumps tens of thousands of lines and hits the cap with no verdict.
 
 ## 5. Sol-first correctness review (read-only)
 
@@ -37,6 +37,8 @@ Prompt for CORRECTNESS bugs, not style (simplify owns that). Scale adversarialne
 - a fixed per-item verdict format: `no issue — why, file:line`, or a finding with `file:line` plus the concrete failure scenario; plus the list of files + line ranges the reviewer actually read
 
 Skip this review entirely for docs-only diffs and record `review: skipped (docs-only)` in the commit message — there is no correctness surface to find.
+
+On any harness whose orchestrator has a shell, the CodeRabbit CLI is a complementary route rather than a duplicate of the Sol pass — invocation, the `-t uncommitted` spelling on older CLIs, and the process cap are in the Claude Code subsection below, and they apply verbatim wherever you can run it.
 
 ### gx
 
@@ -75,6 +77,7 @@ shell command.
 ```bash
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
+echo "$tmpdir"
 run_codex() { perl -e 'alarm 600; exec @ARGV' -- "$@"; }
 {
   cat <<'REVIEW_9f3a2b1c'
@@ -109,10 +112,13 @@ agent **not** to retry with a `…-fast` model (forge never uses fast slugs);
 one empty or failed run → self-review. Do not retry codex on a rate limit.
 CodeRabbit's CLI, if installed, is the other route and a real complement —
 `coderabbit review --agent --uncommitted --include-untracked -c <instructions>.md`
+(older CLIs spell the scope `-t uncommitted`; check `coderabbit review --help`)
 found a contract bug (a counter bumped only on the success path) that codex
 and self-review both missed; prefer it when a sandboxed CLI reviewer refuses
-to start at all. If no external reviewer runs, self-review and say so in the
-commit message.
+to start at all. It has no cap flag of its own, so bound the process the same
+way as codex — the same 600 s wrapper, or the harness's own reviewer cap — and
+treat a killed run as "no review", never "no findings", and fall through. If
+no external reviewer runs, self-review and say so in the commit message.
 
 ## 6. Disposition
 

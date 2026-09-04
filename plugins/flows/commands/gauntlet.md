@@ -122,14 +122,22 @@ grouped per repo, since each repo becomes its own PR.
   it has finished.
 - **Never two implementers in one tree.** Sequential implementers edit the
   branch tree directly (no isolation). Parallel ones each need the `Agent`
-  tool's `isolation: "worktree"` and hand back a patch (`git add -N .;
-  git diff > x.patch`) for the orchestrator to apply and commit. A subagent
-  inherits the session's worktree pin, so it cannot `cd` or `git -C` into a
-  worktree you made by hand — it will silently fall back to editing the
-  shared tree alongside its sibling. An isolated worktree branches from
-  `origin/<default-branch>` unless the harness is configured to branch from
-  HEAD, so by default use them only for commits independent of the branch's
-  unmerged work.
+  tool's `isolation: "worktree"` and hand back a patch
+  (`git add -N . && git diff HEAD --binary > "$(mktemp -d)/x.patch"` — `HEAD`
+  so a file the implementer staged but did not commit is still in the patch,
+  `--binary` so it round-trips, and a `mktemp -d` path so the patch lives
+  outside the worktree and never intent-adds itself) for the orchestrator to
+  apply and commit. A subagent inherits the session's worktree pin, so it
+  cannot `cd` or `git -C` into a worktree you made by hand — it will silently
+  fall back to editing the shared tree alongside its sibling. An isolated
+  worktree branches from `origin/<default-branch>` unless the harness is
+  configured to branch from HEAD, so by default use them only for commits
+  independent of the branch's unmerged work. Resolve and verify that base
+  **before spawning** — the harness creates the worktree, and a repo whose
+  default is `master`/`develop`, or a stale ref, fails the creation or bases
+  it wrong: `gh repo view --json defaultBranchRef -q .defaultBranchRef.name`
+  (or `git symbolic-ref refs/remotes/origin/HEAD`), then `git fetch origin`,
+  then `git rev-parse --verify --quiet origin/<default-branch>`.
 - Verify each commit's user-visible behavior as you go, using the tooling
   the plan's verification section chose (artifacts into the plan's artifact
   folder) — catching a behavior miss at commit time is far cheaper than at

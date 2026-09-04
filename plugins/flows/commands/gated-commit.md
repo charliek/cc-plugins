@@ -75,14 +75,17 @@ reference). If empty, derive it from the diff.
      actually enforceable.)
 
    For diffs past ~900 lines, **hand the reviewer a diff file** rather than
-   letting it derive the diff: `git add -N .` (so new files appear) then
-   `git diff > <tmp>/x.diff`, and instruct it to read that file first, never
-   run `git diff` itself, then read only the named functions with narrow line
-   ranges, within a stated read budget. Require a fixed per-item verdict —
-   "no issue — why, file:line", or a finding with file:line plus the concrete
-   failure scenario — plus the list of files/ranges it read. A reviewer left
-   to discover a big diff dumps tens of thousands of lines and reaches the cap
-   with no verdict.
+   letting it derive the diff: `git add -N .` (intent-to-add, so new files
+   appear) then `git diff HEAD > "$(mktemp -d)/x.diff"` — `HEAD` captures
+   staged and unstaged together, so a partially staged tree isn't half
+   reviewed, and the `mktemp -d` path is per-invocation so parallel reviews
+   never overwrite each other. Instruct it to read that file first, never
+   run `git diff` itself, then read only the named files, sections, symbols,
+   or line ranges, within a stated read budget. Require a fixed per-item
+   verdict — "no issue — why, file:line", or a finding with file:line plus
+   the concrete failure scenario — plus the list of files/ranges it read. A
+   reviewer left to discover a big diff dumps tens of thousands of lines and
+   reaches the cap with no verdict.
 
    SKIP the external review for docs-only diffs (and say so in the commit
    message) — there is no correctness surface for it to find.
@@ -90,12 +93,16 @@ reference). If empty, derive it from the diff.
    If codex is unavailable, rate-limited, or stalls past the cap, fall back
    to `cursor:cursor-rescue` with the same prompt — do NOT retry codex on a
    rate limit (the retry hits the same quota). CodeRabbit's CLI
-   (`coderabbit review --agent --uncommitted --include-untracked -c <instructions>.md`)
-   is the other strong route, and a genuine complement: it found a contract
-   bug (a counter bumped only on the success path) that both codex and
-   self-review missed. Prefer it when a sandboxed CLI reviewer can't start at
-   all. If no external reviewer is available, do a careful self-review pass
-   and note that in the commit message.
+   (`coderabbit review --agent --uncommitted --include-untracked -c <instructions>.md`
+   — older CLIs spell the scope `-t uncommitted`; check `coderabbit review
+   --help`) is the other strong route, and a genuine complement: it found a
+   contract bug (a counter bumped only on the success path) that both codex
+   and self-review missed. Prefer it when a sandboxed CLI reviewer can't start
+   at all. It has no timeout flag of its own, so bound it the same way as
+   codex — run it under the shell tool's timeout (600000, the maximum) and
+   treat a killed run as "no review", not "no findings", and fall through.
+   If no external reviewer is available, do a careful self-review pass and
+   note that in the commit message.
 
 5. **Disposition every finding.** For each review finding: fix it, or record
    WHY it's skipped (pre-existing scope, deliberate house pattern, plan-pinned
