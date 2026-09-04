@@ -20,8 +20,19 @@ reference). If empty, derive it from the diff.
    say which commands you chose. Typical shape:
    `make lint && make test && <frontend build if present>`.
 
+   **Derive from CI too, not just the Makefile.** Grep the CI workflow for
+   build/test invocations its documented targets don't cover — feature-gated
+   or per-crate/per-package steps especially — and add the ones covering the
+   code you touched. A CI-only feature build caught an exhaustive-match break
+   the whole local gate missed.
+
 2. **Run the gate.** All gate commands must pass before anything else. Fix
    failures in the diff's own code; do not weaken tests to pass them.
+
+   **Test-bearing diffs**: rebuild before running — a stale binary passes
+   vacuously — and give every new or converted functional test a negative
+   control: break the expectation, watch it fail on that exact line, restore.
+   An assertion never seen red is not evidence.
 
 3. **Conditional simplify pass.** Run `/simplify` in a subagent scoped to the
    uncommitted diff. Model choice follows the diff's difficulty: sonnet for
@@ -35,8 +46,9 @@ reference). If empty, derive it from the diff.
    Prefix the subagent's description with its model — `(opus) Simplify …` —
    as with every subagent in these flows.
 
-   SKIP simplify for small single-file diffs, mechanical moves, and
-   net-deletion diffs — those passes historically return nothing.
+   SKIP simplify for small single-file diffs, mechanical moves,
+   net-deletion diffs, and docs-only diffs — those passes historically return
+   nothing.
    Tell the simplify subagent which decisions are pinned spec (from the plan
    or from `$ARGUMENTS`) so it doesn't "simplify away" mandated behavior.
    Re-run the relevant gate subset after any applied fix.
@@ -62,15 +74,45 @@ reference). If empty, derive it from the diff.
      (10 minutes matches the Bash tool's maximum timeout, so the cap is
      actually enforceable.)
 
+   For diffs past ~900 lines, **hand the reviewer a diff file** rather than
+   letting it derive the diff: `git add -N .` (intent-to-add, so new files
+   appear) then `git diff HEAD > "$(mktemp -d)/x.diff"` — `HEAD` captures
+   staged and unstaged together, so a partially staged tree isn't half
+   reviewed, and the `mktemp -d` path is per-invocation so parallel reviews
+   never overwrite each other. Instruct it to read that file first, never
+   run `git diff` itself, then read only the named files, sections, symbols,
+   or line ranges, within a stated read budget. Require a fixed per-item
+   verdict — "no issue — why, file:line", or a finding with file:line plus
+   the concrete failure scenario — plus the list of files/ranges it read. A
+   reviewer left to discover a big diff dumps tens of thousands of lines and
+   reaches the cap with no verdict.
+
+   SKIP the external review for docs-only diffs (and say so in the commit
+   message) — there is no correctness surface for it to find.
+
    If codex is unavailable, rate-limited, or stalls past the cap, fall back
    to `cursor:cursor-rescue` with the same prompt — do NOT retry codex on a
-   rate limit (the retry hits the same quota). If neither is installed, do a
-   careful self-review pass and note that in the commit message.
+   rate limit (the retry hits the same quota). CodeRabbit's CLI
+   (`coderabbit review --agent --uncommitted --include-untracked -c <instructions>.md`
+   — older CLIs spell the scope `-t uncommitted`; check `coderabbit review
+   --help`) is the other strong route, and a genuine complement: it found a
+   contract bug (a counter bumped only on the success path) that both codex
+   and self-review missed. Prefer it when a sandboxed CLI reviewer can't start
+   at all. It has no timeout flag of its own, so bound it the same way as
+   codex — run it under the shell tool's timeout (600000, the maximum) and
+   treat a killed run as "no review", not "no findings", and fall through.
+   If no external reviewer is available, do a careful self-review pass and
+   note that in the commit message.
 
 5. **Disposition every finding.** For each review finding: fix it, or record
    WHY it's skipped (pre-existing scope, deliberate house pattern, plan-pinned
    decision). Findings must never be silently dropped. Re-run the gate after
    fixes.
+
+   Check a proposed fix against the plan's pinned decisions before applying
+   it — reviewers routinely "fix" a deliberate choice back to the default.
+   And a reviewer's "no issue" does not close an item you already flagged:
+   record both views; the disagreement is itself the disposition.
 
 6. **Commit.** One commit, message = what changed and why, plus one line per
    notable review finding and its disposition ("codex review finding" /
@@ -91,6 +133,10 @@ reference). If empty, derive it from the diff.
   practice their finding sets don't overlap — the review finds bugs,
   simplify finds structure. That's why both stay, and why simplify is
   conditional.
+- **Grep for importers before deleting or renaming a public name** in a test
+  helper or shared module (`from X import`, `use crate::…`). A sibling module
+  importing a deleted name breaks collection for every lane — including one
+  that only *deselects* that module, since `-m 'not marker'` still imports it.
 - **Don't `--unsafe` autofix**: linter unsafe fixes have broken deliberate
   patterns (renamed load-bearing identifiers). Apply safe fixes only; make
   cosmetic changes by hand.

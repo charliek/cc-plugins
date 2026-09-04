@@ -93,7 +93,41 @@ Per changed repo: one feature branch (`feature/plan-NNN-<slug>`), one PR,
 many standalone commits.
 
 For each planned unit: spawn an implementer subagent with the plan section
-as spec (subagent does NOT commit; writable type; `isolation` omitted).
+as spec (subagent does NOT commit; writable type). Sequential implementers
+edit the branch tree directly (`isolation` omitted). **Never two implementers
+in one tree** — parallel ones each need their own, and the way to get one is
+per harness:
+
+- **Claude Code:** the spawn tool's `isolation: "worktree"`, and only that. A
+  subagent inherits the session's worktree pin and cannot `cd` or `git -C`
+  into a worktree you made by hand — it silently falls back to editing the
+  shared tree alongside its sibling.
+- **gx:** `task` takes `isolation: "worktree"`, or a `cwd` naming a worktree
+  you created (the two are mutually exclusive). Worktree creation is
+  best-effort — on failure gx drops the child into the shared workspace with
+  only a log line — so confirm each implementer really landed in its own tree
+  before letting them run at once.
+- **Cursor:** no isolation primitive we can verify. Run implementers serial on
+  the branch, or create the worktree yourself and launch the sub-agent *in* it
+  as its working directory. Never two in a shared tree.
+
+Each isolated implementer hands back a patch, written with
+`git add -N . && git diff HEAD --binary > "$(mktemp -d)/x.patch"`: `HEAD` so a
+file it staged but did not commit is still included, `--binary` so the patch
+round-trips, and a path outside the worktree so the patch never intent-adds
+itself. The orchestrator applies it. An isolated worktree branches from
+`origin/<default-branch>` unless the harness is configured to branch from
+HEAD, so by default use them only for units independent of the branch's
+unmerged work. Resolve and verify that base **before spawning**, since the
+harness creates the worktree and a repo defaulting to `master`/`develop` (or a
+stale ref) fails or mis-bases it: `gh repo view --json defaultBranchRef -q
+.defaultBranchRef.name` (or `git symbolic-ref refs/remotes/origin/HEAD`),
+`git fetch origin`, then `git rev-parse --verify --quiet origin/<default>`.
+
+Every implementer brief says **"run the gate synchronously, in the
+foreground"** — subagents that background a long gate report success before
+it finishes.
+
 Then run the gated-commit procedure inline. Verify user-visible behavior as
 you go (artifacts into the plan's artifact folder). If the implementer
 deviates from the plan, fix the code or amend the plan — never leave them
@@ -122,7 +156,11 @@ Per repo that changed:
 2. Watch CI until green. If `git-commands` is installed, **read** that
    plugin's `watch-pr` command file and execute its steps inline (do not
    emit `/watch-pr`). If it is missing, `gh pr checks --watch --fail-fast`
-   (or poll `gh pr checks` every 30s) and say so.
+   (or poll `gh pr checks` every 30s) and say so — `--fail-fast` exits on the
+   first failing check, bot reviews included, so when only a bot check
+   tripped it, resume the watch without that flag. Either way the circuit
+   breaker counts infrastructure reruns as well as code fixes: after one
+   rerun of the same job, a second failure stops the loop and asks the user.
 3. Bot reviews: verify the bot actually reviewed (a rate-limited
    CodeRabbit can show as "pass" with no body). Fix each finding or reply
    with the disposition. Never silently ignore.

@@ -28,7 +28,9 @@ diffs. Never runs on the fable-class model.
 
 Per-unit inner loop: repo gate → conditional simplify → Sol-first
 correctness review (10-minute cap, then kill) → dispositions → one commit.
-Does not push.
+Docs-only diffs skip simplify and the review and say so in the message; big
+diffs reach the reviewer as a diff *file*. Does not push. Details in
+`references/gated-commit.md`.
 
 ### `/forge:gauntlet <scope brief>`
 

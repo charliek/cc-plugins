@@ -30,6 +30,44 @@ Check that the `codex` CLI is installed and authenticated, and report a readines
 
 All commands pin **`gpt-5.6-sol`** at **`model_reasoning_effort="high"`**, stated near the top of each command/subagent file (when bumping the default, update every command file plus this README). They deliberately do NOT inherit `~/.codex/config.toml`'s default, so runs are deterministic across machines. Override per call with `--model <id>` and `--effort none|minimal|low|medium|high|xhigh` (effort maps to `-c model_reasoning_effort="..."`).
 
+## Knowledge baked in (learned the hard way)
+
+- **Never let Codex derive a big diff itself.** Past ~900 changed lines, a
+  Codex told to review "the current changes" runs `git diff` at
+  `--unified=999999`, dumps ~30k lines, and hits the 10-minute cap without a
+  verdict. Write the diff to a file first — `git add -N .` (intent-to-add, so
+  new files appear) then `git diff HEAD > "$(mktemp -d)/x.diff"`, which puts
+  staged, unstaged, and new files in one file at a per-invocation path
+  (parallel rescues are the norm here; a predictable shared `/tmp/x.diff` gets
+  clobbered mid-run). Then tell it: read this file first, do NOT run
+  `git diff`, then read only the named files, sections, symbols, or line
+  ranges you need.
+- **Budget the run in the prompt**: "at most N minutes and M file reads; print
+  the report and stop." Pair it with a fixed per-item verdict format — either
+  `no issue — why, file:line` or a finding with `file:line` plus the concrete
+  failure scenario — and require it to list the files + line ranges it read.
+  Unbudgeted big reviews return prose and no verdicts.
+- **A missing or empty `-o` file is "no review", never "no findings".** An
+  interrupted or killed run writes nothing; treat it as a failed route and
+  fall back.
+- **A killed run leaves the thread locked.** The `codex exec` process outlives
+  the cap kill and keeps the thread, so `codex exec resume <id>` then fails
+  with `thread already has an active writer`. Kill the leftover process (match
+  the run's own `$tmpdir` in the command line, not every `codex exec`, so
+  concurrent rescues survive) and rerun a fresh, narrowed prompt — that beat
+  resuming every time. `echo "$tmpdir"` **before** launching `codex exec`: on a
+  timeout the partial output is all you get, and without it you never learn the
+  value to match.
+- **Long or generated prompts go in as a file**: `codex exec … -o /tmp/out.txt - < prompt.txt`
+  is as expansion-safe as a quoted heredoc and survives command guards that
+  reject heredocs. It needs a file-writing tool, so the rescue command and
+  subagent (Bash-only) keep the heredoc form.
+- **CodeRabbit's CLI complements Codex rather than duplicating it**:
+  `coderabbit review --agent --uncommitted --include-untracked -c instructions.md`
+  caught a contract bug (a counter bumped only on the success path) that both
+  Codex and self-review missed. Reach for it when Codex stalls or is
+  rate-limited.
+
 ## Prerequisites
 
 - The Codex CLI installed: `npm install -g @openai/codex`.

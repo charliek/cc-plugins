@@ -20,6 +20,7 @@ Use `$ARGUMENTS` as an optional PR number. If not provided, use the PR associate
    - Run `gh pr checks <number> --watch --fail-fast`
    - If `--watch` is not supported, fall back to polling `gh pr checks <number>` every 30 seconds
    - Ignore bot review checks (e.g. CodeRabbit) when evaluating pass/fail — these are informational
+   - `--fail-fast` exits on the *first* failing check, bot checks included, so it can end the watch while required CI is still running. When it returns, look at what actually failed: if it was only a bot review check, resume with `gh pr checks <number> --watch` (no `--fail-fast`) and keep waiting. In a repo that defines required checks, `gh pr checks <number> --watch --fail-fast --required` avoids the problem outright — but `--required` shows nothing at all in a repo without branch protection, so don't reach for it blindly
 
 3. **Evaluate CI results**: Categorize the outcomes
    - If all required checks passed, move to step 5 (bot review)
@@ -32,10 +33,11 @@ Use `$ARGUMENTS` as an optional PR number. If not provided, use the PR associate
    - Determine the fix from the logs and CI config — do not hardcode any CI job names or language-specific commands
    - Run equivalent local checks to verify the fix before pushing
    - Commit the fix, push, and go back to step 2 to re-watch
-   - **Circuit breaker**: If the same check fails a second time after a fix attempt, stop and ask the user for guidance instead of continuing to retry
+   - To retry an infra flake rather than fix code: `gh run rerun <run-id> --failed` is **refused while the run is still in progress** — wait for the run to settle first
+   - **Circuit breaker**: count infrastructure reruns, not just code fixes. After one rerun of the same job, a second failure — whether it followed a code-fix push or a plain flake rerun — stops the loop: ask the user for guidance instead of retrying again. If the *same* check fails with a *different* test each time, that is runner load rather than anything wrong with the branch; say so, and still stop after two reruns
 
 5. **Wait for bot review**: Check for bot review tools
-   - Look at the PR checks for any bot review tool (e.g. CodeRabbit)
+   - Look at the PR checks for any bot review tool (e.g. CodeRabbit, Greptile) — **more than one may review**, so check each for an actual body; a "pass" check with no review body is not a review
    - If no bot review tool is detected, skip to step 7
    - Poll for review comments using `gh pr view <number> --json reviews,comments`.
      CodeRabbit typically completes within a few minutes; if no review
@@ -50,9 +52,12 @@ Use `$ARGUMENTS` as an optional PR number. If not provided, use the PR associate
      before responding.
 
 6. **Handle review comments**: Evaluate and address feedback
-   - Read the review comments from the PR
+   - List the inline review comments first: `gh api --paginate repos/{owner}/{repo}/pulls/<pr>/comments`. `gh pr view --json reviews,comments` returns review summaries and issue comments but no inline bodies or ids, so relying on it alone silently skips every line comment. Read one comment in full with `gh api repos/{owner}/{repo}/pulls/comments/<id>`
    - Evaluate each comment: fix comments that point out real improvements (bugs, correctness, meaningful quality issues)
+   - Verify a suggested fix against the change's own pinned decisions before applying it — a reviewer will happily "fix" a deliberate choice back to the default
+   - Reply on the thread with `gh api --method POST repos/{owner}/{repo}/pulls/<pr>/comments/<id>/replies -f body=…` so the disposition lands where the finding is. `<id>` must be the thread's **root** comment: if the comment you are answering has an `in_reply_to_id`, post to that id instead of its own — GitHub rejects a reply to a reply
    - Skip nitpicks, style-only suggestions, and comments that don't improve the code
+   - Editing the PR body (`gh pr edit --body-file`) overwrites CodeRabbit's appended summary — harmless, it re-adds it on the next review, but don't mistake it for the bot retracting anything
    - If changes were made, commit, push, and go back to step 2 to re-watch
    - If no changes were needed, move to step 7
 
