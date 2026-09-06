@@ -138,25 +138,39 @@ board view works against the `Closes` convention. Do not add either.
 | `<Epic> — by repo` | `Repository` | Title, Status, Phase, Blocked by, Labels |
 
 **Check first — creation is not idempotent.** `createProjectV2View` will
-happily make a second view with the same name:
+happily make a second view with the same name, so look the name up and
+**reuse the id if it is already there**; only create when the lookup comes
+back empty. Extending an epic must not add a third and fourth view.
 
 ```bash
-gh api graphql -f query='
+# 100 is the per-page maximum; page with `after` if the board ever exceeds it.
+# Note the pipe: gh's own --jq takes one expression and no --arg, so the
+# name is matched by a real jq process instead.
+NAME="$EPIC — by phase"
+VIEW_ID=$(gh api graphql -f query='
   query($id:ID!){node(id:$id){... on ProjectV2{
-    views(first:50){nodes{id name}}}}}' -f id="$PID" \
-  --jq '.data.node.views.nodes[] | "\(.name)\t\(.id)"'
+    views(first:100){nodes{id name}}}}}' -f id="$PID" \
+  | jq -r --arg n "$NAME" '.data.node.views.nodes[] | select(.name==$n) | .id')
 ```
+
+Match on the **exact** name: a `by phase` view for `Roost Pivot 2` must not
+satisfy the lookup for `Roost Pivot`.
 
 **Create, then update — `createProjectV2View` accepts no `filter`.** It
 takes only `projectId`, `name`, `layout` and `configuration`, so the filter
-and the column set go on in a second call:
+and the column set go on in a second call.
+
+**Run this pair once per row of the table above** — the block below is the
+`by phase` view; the `by repo` view is the same two calls with that row's
+name and column list, and `Repository` as the grouping field. An epic with
+only one view is not finished.
 
 ```bash
 VIEW_ID=$(gh api graphql -f query='
   mutation($p:ID!,$n:String!){
     createProjectV2View(input:{projectId:$p,name:$n,layout:TABLE_LAYOUT}){
       projectV2View{id}}}' \
-  -f p="$PID" -f n="$EPIC — by phase" \
+  -f p="$PID" -f n="$NAME" \
   --jq '.data.createProjectV2View.projectV2View.id')
 
 # Column order is the order of this list.
@@ -204,8 +218,9 @@ gh api graphql -f query='
 The **item count cannot**: `ProjectV2View` has no `items` field, and the
 server stores any filter string verbatim without validating it, so a filter
 matching nothing is indistinguishable from one that works. Read the count
-in the browser's filter bar and check it against the number of items you
-just added. Then reload the view and confirm the grouping survived. If no browser is available, create the views anyway and report
+in the browser's filter bar and check it against the number of items
+carrying that `Epic` value — **the whole epic, not just the items this run
+added**, since an extended epic's views already hold the earlier ones. Then reload the view and confirm the grouping survived. If no browser is available, create the views anyway and report
 the grouping and the count check as **outstanding manual steps**, naming
 them — never as done.
 
