@@ -33,6 +33,11 @@ first, then mark an item **ready** when every ID it names is `Done`.
 An item marked `Blocked` whose blockers are all `Done` is stale — call it
 out; that is the most common way one of these boards goes wrong.
 
+This resolution is the reason the command exists. `Blocked by` is a text
+field, and Projects cannot filter, slice or group on text, so no saved
+board view can show blocked items — see
+`references/epic-model.md` § Projects v2 limits. Do not suggest one.
+
 ## 3. Report, in this order
 
 1. **Ready now** — open, unblocked, grouped by track, with sizes. This is
