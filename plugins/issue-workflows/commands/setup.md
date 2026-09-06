@@ -146,12 +146,15 @@ progress) are empty for every epic item:
 
 ```bash
 # Field and view IDs come from field-list and the views query above.
-gh api graphql -f query='
-mutation($v:ID!,$f:[ID!]){
-  updateProjectV2View(input:{viewId:$v,name:"All epics",layout:TABLE_LAYOUT,
-    filter:"",configuration:{visibleFieldIds:$f}}){projectV2View{name}}}' \
-  -f v="$VIEW_ID" -F f="$TITLE_ID" -F f="$EPIC_ID" -F f="$PHASE_ID" \
-  -F f="$STATUS_ID" -F f="$REPO_ID"
+# The [ID!] list must go in as JSON: repeated -F flags do not build an
+# array, and -F f='["a","b"]' passes the whole string as one id.
+IDS=$(printf '%s\n' "$TITLE_ID" "$EPIC_ID" "$PHASE_ID" "$STATUS_ID" \
+        "$REPO_ID" | jq -R . | jq -s -c .)
+
+jq -n --arg v "$VIEW_ID" --argjson ids "$IDS" \
+  '{query:"mutation($v:ID!,$ids:[ID!]){updateProjectV2View(input:{viewId:$v,name:\"All epics\",layout:TABLE_LAYOUT,filter:\"\",configuration:{visibleFieldIds:$ids}}){projectV2View{name}}}",
+    variables:{v:$v, ids:$ids}}' \
+  | gh api graphql --input -
 ```
 
 Then set **Slice by `Epic`** on it — the sidebar that makes one board hold

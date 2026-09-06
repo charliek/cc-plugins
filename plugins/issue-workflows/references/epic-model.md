@@ -108,7 +108,13 @@ time.
   without validating it — **a filter that matches nothing looks exactly
   like a filter that works**. Verify by reading the count in the browser's
   filter bar, against a number computed independently from item field
-  values.
+  values. The view's `fields` connection *is* readable, but it returns the
+  project's field-definition order, so it confirms which columns are
+  present and never their arrangement.
+- **A `[ID!]` argument has no working `gh` flag form.** `visibleFieldIds`
+  must be sent as JSON through `gh api graphql --input -`. Repeated
+  `-F ids=` is rejected outright; `-F ids='["a","b"]'` is accepted and
+  wrong, passing the bracketed string as one id.
 - **Text fields cannot be filtered on presence.** Against 16 items that
   had a `Blocked by` value, `has:blocked-by`, `-no:blocked-by`,
   `-blocked-by:""` and `blocked-by:*` each returned **0**; bare
