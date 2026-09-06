@@ -139,6 +139,28 @@ That collision is why the epic's own sequencer is called `Phase`.
 Field *values* are per-epic and are added by `/issue-workflows:epic`, not
 here. This step only guarantees the board and its field shapes.
 
+Finally, give the board its index view. Rename the stock `View 1` to
+`All epics`, leave it unfiltered and default, and replace its stock
+columns — the defaults (Assignees, Linked pull requests, Sub-issues
+progress) are empty for every epic item:
+
+```bash
+# Field and view IDs come from field-list and the views query above.
+gh api graphql -f query='
+mutation($v:ID!,$f:[ID!]){
+  updateProjectV2View(input:{viewId:$v,name:"All epics",layout:TABLE_LAYOUT,
+    filter:"",configuration:{visibleFieldIds:$f}}){projectV2View{name}}}' \
+  -f v="$VIEW_ID" -F f="$TITLE_ID" -F f="$EPIC_ID" -F f="$PHASE_ID" \
+  -F f="$STATUS_ID" -F f="$REPO_ID"
+```
+
+Then set **Slice by `Epic`** on it — the sidebar that makes one board hold
+many epics. That step is **browser-only**; so is the per-epic grouping in
+`/issue-workflows:epic`. See `references/epic-model.md` § Projects v2
+limits for why, and for the three other API gaps that shape what a view
+can do. Do not report a view as configured until its grouping or slicing
+has been saved and survives a reload.
+
 ## 4. Report
 
 State plainly, per repo: labels created, issues migrated by mapping, stock

@@ -43,7 +43,7 @@ including built-ins**:
 |---|---|---|
 | `Epic` | single-select | Which initiative. One value per epic; every view filters on it. |
 | `Phase` | single-select | **Prefixed per epic** — `RP/M1`, `RP/M2`. Single-selects are board-global, so bare `M1` would collide across epics. |
-| `Blocked by` | text | Item IDs, comma-separated. Projects has no dependency field. |
+| `Blocked by` | text | Item IDs, comma-separated. Projects has no dependency field. **Display-only** — text fields cannot be filtered, sliced or grouped, so this can never drive a view; `/issue-workflows:status` reads it instead. See § Projects v2 limits. |
 | `Status` | built-in | `Todo`, `In Progress`, `Done` — the stock set, not customised. Blocked is carried by the `status/blocked` label and the `Blocked by` field, so the board needs no fourth column. |
 | `Repository` | built-in | **This is the track.** Do not add a `Track` field — for a repo-shaped epic it would duplicate this exactly. |
 | labels | from the issue | `effort/` carries size; do not mirror it into a board field. |
@@ -57,17 +57,74 @@ repo — subdivide with an `area/` label rather than adding a field.
 
 ## Views
 
-Per-epic saved views, each filtered to one `Epic` value:
+One board-wide index, plus two saved views per epic. Each epic view is
+filtered to a single `Epic` value — a view must never show a mix, because
+the board holds every epic.
 
-- **`<Epic> — by phase`**, grouped by `Phase`. Reading it top to
-  bottom is the execution order. This is the view that answers "what next,
-  and what can ship".
+- **`All epics`** — the default view, unfiltered, with **Slice by `Epic`**.
+  Slicing puts a sidebar on the left listing every epic with a live item
+  count; clicking one filters the table to it. New epics appear there on
+  their own, which is what makes a single board scale. Columns: `Title`,
+  `Epic`, `Phase`, `Status`, `Repository` — the stock column set
+  (Assignees, Linked pull requests, Sub-issues progress) is empty for every
+  epic item and should be replaced.
+- **`<Epic> — by phase`**, grouped by `Phase`. Reading it top to bottom is
+  the execution order. This is the view that answers "what next, and what
+  can ship".
 - **`<Epic> — by repo`**, grouped by `Repository`. What you hand to a
   session working in one repo.
-- **`<Epic> — blocked`**, filtered to items whose `Blocked by` names
-  something not yet Done.
+
+Two views that look obvious and are not worth creating:
+
+- **A `blocked` view cannot be built.** The filter language has no
+  empty/non-empty predicate for a **text** field, so nothing can select
+  "items whose `Blocked by` is set" — see § Projects v2 limits. Such a view
+  degrades to `-status:Done`, which is a duplicate of `by phase` wearing a
+  misleading name. Blocked analysis belongs in
+  `/issue-workflows:status`, which resolves the ID → status map
+  client-side and can therefore also spot *stale* blockers.
+- **A board (kanban) view is a trap here.** Its primary affordance is
+  dragging a card between Status columns, and that is precisely what
+  § Status moves by itself forbids. `by phase` already carries `Status` as
+  a column, in execution order.
 
 Archive an epic's items when it closes, so the board stays readable.
+
+## Projects v2 limits worth knowing before designing a view
+
+All four verified against this account; each one has cost a session real
+time.
+
+- **Group by, sort by and slice by are not settable through the API.**
+  `ProjectV2ViewConfigurationInput` carries exactly one field,
+  `visibleFieldIds`. Views can be *created* and filtered and given columns
+  by GraphQL, but grouping is a **manual browser step**: open the view,
+  *View* → *Group by*, then **Save view** and confirm the dialog — picking
+  the field alone leaves the change unsaved.
+- **A view's item count cannot be read back from the API.**
+  `ProjectV2View` has no `items` field, so a filter cannot be verified by
+  GraphQL. `createProjectV2View` also accepts no `filter`, so a view is
+  created and then updated. The server stores any filter string verbatim
+  without validating it — **a filter that matches nothing looks exactly
+  like a filter that works**. Verify by reading the count in the browser's
+  filter bar, against a number computed independently from item field
+  values.
+- **Text fields cannot be filtered on presence.** Against 16 items that
+  had a `Blocked by` value, `has:blocked-by`, `-no:blocked-by`,
+  `-blocked-by:""` and `blocked-by:*` each returned **0**; bare
+  `no:blocked-by` returned all 24. A text field is display-only — it can
+  never drive a view, a slice, or a group. Anything that must be
+  filterable has to be a single-select.
+- **A roadmap needs a Date or Iteration field; there is no free timeline.**
+  The roadmap layout renders every row blank until a date source is set,
+  and the picker offers only those two types — `Created`, `Updated` and
+  `Closed` are not offered. `Date` means start+target **per item**;
+  `Iteration` sets its dates once on the field, so items stay a dropdown
+  pick and the timeline gains milestone markers and an auto-advancing
+  `@current`. For an epic paced in someone's free time, neither earns its
+  upkeep: `Phase` already sequences the work, and **Insights → Burn up**
+  charts progress from item add/close timestamps with no date field at
+  all.
 
 ## Item identity
 
