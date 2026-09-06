@@ -37,10 +37,37 @@ session (conventions rule 2), so filing it as-is just moves the problem.
 
 ## 3. Add the epic's field values
 
-`Epic` and `Phase` are single-select fields shared by every epic on
-the board. Add the new values — phases **prefixed per epic**
-(`RP/M1`) because the field is board-global — and never remove another
-epic's. There is no `Track` field: the built-in `Repository` is the track.
+`Epic` and `Phase` are single-select fields shared by every epic on the
+board. Phases are **prefixed per epic** (`RP/M1`) because the field is
+board-global. There is no `Track` field: the built-in `Repository` is the
+track.
+
+**Adding options to an existing single-select field needs GraphQL, and it
+is destructive if done wrong.** `gh project field-create` only creates a
+field; the CLI cannot append an option to one that exists.
+`updateProjectV2Field` **replaces** the whole option list, so omitting the
+current options deletes them — and clears that field on every item already
+using them.
+
+Always read first, then write the union:
+
+```bash
+gh api graphql -f query='
+  query($id: ID!) { node(id: $id) { ... on ProjectV2SingleSelectField {
+    id name options { id name } } } }' -f id="$FIELD_ID"
+```
+
+Send every existing option back unchanged, with the new ones appended:
+
+```bash
+gh api graphql -f query='
+  mutation($f: ID!, $opts: [ProjectV2SingleSelectFieldOptionInput!]!) {
+    updateProjectV2Field(input: {fieldId: $f, singleSelectOptions: $opts}) {
+      projectV2Field { ... on ProjectV2SingleSelectField { options { id name } } } } }'   -f f="$FIELD_ID" -F opts="$OPTS_JSON"
+```
+
+Option **names** round-trip; the returned **ids** are what step 5 needs.
+Never send a partial list.
 
 ## 4. File one issue per item
 
@@ -56,18 +83,47 @@ repo where the work happens, which is often not the repo you are sitting in.
 Filing is the slow part; do the whole set before touching the board so a
 failure halfway leaves issues without board rows rather than the reverse.
 
-## 5. Add each issue to the board and set its fields
+**Make it resumable.** A retry must not double-file. Before creating
+anything, search the target repo for the item's bracketed ID and reuse
+what is already there:
 
 ```bash
-gh project item-add "$N" --owner "$OWNER" --url "$ISSUE_URL"
-gh project item-edit --project-id "$PID" --id "$ITEM_ID" \
-  --field-id "$FIELD_ID" --single-select-option-id "$OPTION_ID"
+gh issue list -R "$R" --state all --search "in:title [R3]" --json number,url,title
 ```
 
-Set `Epic`, `Phase`, and `Blocked by` (free text — the IDs,
-comma-separated). `Repository` fills itself, and size lives on the
-`effort/` label, not on the board. Leave `Status` at its default; the PR
-moves it.
+Keep an ID → issue-URL map as you go and write it somewhere durable, so a
+run interrupted between filing and board updates resumes from the map
+rather than from scratch. The duplicate check in `file.md` § 1 searches on
+prose and will not catch a re-filed epic item; the bracketed ID is what
+makes this reliable.
+
+## 5. Add each issue to the board and set its fields
+
+`item-add` is idempotent per issue and returns the item id; re-adding an
+issue already on the board returns the existing one.
+
+```bash
+ITEM_ID=$(gh project item-add "$N" --owner "$OWNER" --url "$ISSUE_URL" \
+            --format json --jq '.id')
+```
+
+**Each field type takes a different flag.** One `item-edit` call per
+field — a single call cannot set them all:
+
+```bash
+# Epic and Phase are SINGLE_SELECT -> --single-select-option-id
+gh project item-edit --project-id "$PID" --id "$ITEM_ID" \
+  --field-id "$EPIC_FIELD_ID"  --single-select-option-id "$EPIC_OPTION_ID"
+gh project item-edit --project-id "$PID" --id "$ITEM_ID" \
+  --field-id "$PHASE_FIELD_ID" --single-select-option-id "$PHASE_OPTION_ID"
+
+# Blocked by is TEXT -> --text
+gh project item-edit --project-id "$PID" --id "$ITEM_ID" \
+  --field-id "$BLOCKED_FIELD_ID" --text "A0, R2"
+```
+
+`Repository` fills itself, size lives on the `effort/` label rather than
+on the board, and `Status` stays at its default — the PR moves it.
 
 ## 6. Report
 

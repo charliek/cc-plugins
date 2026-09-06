@@ -26,9 +26,9 @@ gh auth refresh -s project
 
 That is interactive (it opens a browser), so **the user must run it, not
 you** — suggest they type `! gh auth refresh -s project` to run it in
-this session. Everything except `--epics` still works without it; only the
-Project steps need it. Say which steps you are skipping rather than
-failing the whole command.
+this session. Without it, labels and migration still work; only the board steps need it.
+**But if `--epics` was requested, stop** — do not silently do half the job
+and report success. Say which steps ran and which need the refresh.
 
 ## 2. Reconcile labels, per repo
 
@@ -58,14 +58,31 @@ mapping, relabel the issues that carry the old label before deleting it:
 
 ```bash
 # example: prox severity:high -> priority/high
-for n in $(gh issue list -R "$R" --state all --label "severity:high" --limit 200 --json number --jq '.[].number'); do
-  gh issue edit "$n" -R "$R" --add-label priority/high --remove-label "severity:high"
+OLD="severity:high"; NEW="priority/high"; failed=0
+for n in $(gh issue list -R "$R" --state all --label "$OLD" --limit 400 --json number --jq '.[].number'); do
+  gh issue edit "$n" -R "$R" --add-label "$NEW" --remove-label "$OLD" || failed=1
 done
-gh label delete "severity:high" -R "$R" --yes
+# only delete once nothing carries it any more
+remaining=$(gh issue list -R "$R" --state all --label "$OLD" --limit 1 --json number --jq 'length')
+if [ "$failed" = 0 ] && [ "$remaining" = 0 ]; then
+  gh label delete "$OLD" -R "$R" --yes
+else
+  echo "KEEPING $OLD: $remaining issue(s) still carry it"
+fi
 ```
 
-**Never delete a label before its issues are relabelled**, and report how
-many issues moved per mapping.
+**Never delete on the strength of the loop having run.** A failed edit
+mid-loop leaves issues carrying a label you are about to destroy, and the
+labelling is then lost with no record of which issues had it. Re-check the
+count and delete only on zero. Note `--limit` defaults to 30, so pass one
+large enough for the repo.
+
+Report how many issues moved per mapping.
+
+`question` has no `type/` equivalent and is dropped rather than mapped. If
+a repo actually uses it, do not delete it silently: re-label those issues
+`type/docs` where they are answered documentation gaps, or leave the label
+in place and say so. An unused `question` label is safe to delete outright.
 
 Finally, remove the stock labels the convention drops. `good first issue`
 and `help wanted` go **regardless of usage** — these repos are public but
@@ -84,10 +101,12 @@ language names) alone — they are machine-owned.
 
 ## 3. Provision the epics board — only with `--epics`, and only with `project` scope
 
-Look for an existing board before creating one:
+Look for an existing board before creating one, and match on the title
+rather than assuming a number:
 
 ```bash
-gh project list --owner "$OWNER" --format json
+gh project list --owner "$OWNER" --format json \
+  --jq '.projects[] | select(.title=="StrideLabs Epics") | {number, id}'
 ```
 
 If a board named `StrideLabs Epics` exists, reuse it — **never create a
@@ -97,9 +116,20 @@ second**. Otherwise:
 gh project create --owner "$OWNER" --title "StrideLabs Epics"
 ```
 
-Then ensure the custom fields from `references/epic-model.md` exist
-(`gh project field-list` first, `gh project field-create` for the missing
-ones): `Epic` and `Phase` as `SINGLE_SELECT`, `Blocked by` as `TEXT`.
+Then ensure the custom fields from `references/epic-model.md` exist.
+Discover them by **name and type together** — a field that exists with the
+wrong type must be reported, never silently reused, because every later
+`item-edit` against it will fail:
+
+```bash
+gh project field-list "$N" --owner "$OWNER" --format json \
+  --jq '.fields[] | {name, type, id}'
+```
+
+Create only what is missing: `Epic` and `Phase` as `SINGLE_SELECT`,
+`Blocked by` as `TEXT`. Adding *options* to a field that already exists is
+a GraphQL operation and is destructive if done partially — see
+`epic.md` § 3.
 
 Three names are already taken by built-ins and must not be recreated:
 `Status`, `Repository`, and — the one that surprises — **`Milestone`**,

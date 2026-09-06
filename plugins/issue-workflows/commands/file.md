@@ -65,9 +65,16 @@ If a required label does not exist in the repo, run
 
 ## 6. File it
 
+Build the label list from step 5 — do not hardcode it; a `--label` the
+repo does not have makes `gh` fail the whole create:
+
 ```bash
-gh issue create -R "$R" --title "$TITLE" --body-file "$BODY" \
-  --label type/bug --label effort/small
+LABELS=(--label "$TYPE")                       # required, from step 5
+[ -n "${EFFORT:-}" ]   && LABELS+=(--label "$EFFORT")
+[ -n "${PRIORITY:-}" ] && LABELS+=(--label "$PRIORITY")
+[ -n "${TRIAGE:-}" ]   && LABELS+=(--label status/needs-triage)
+
+gh issue create -R "$R" --title "$TITLE" --body-file "$BODY" "${LABELS[@]}"
 ```
 
 Use `--body-file` with a heredoc, never `--body` with an inline string —
