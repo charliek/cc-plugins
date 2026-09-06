@@ -38,13 +38,13 @@
     },
     {
       "name": "codex-cli",
-      "description": "Delegate coding tasks and code reviews to the Codex CLI (codex exec) from Claude Code — direct, brokerless, parallel-safe",
+      "description": "Delegate coding tasks and code reviews to the Codex CLI (codex exec) from Claude Code \u2014 direct, brokerless, parallel-safe",
       "source": "./plugins/codex-cli",
       "category": "development"
     },
     {
       "name": "grok",
-      "description": "Delegate coding tasks to the Grok CLI (grok -p) from Claude Code — headless, brokerless, parallel-safe",
+      "description": "Delegate coding tasks to the Grok CLI (grok -p) from Claude Code \u2014 headless, brokerless, parallel-safe",
       "source": "./plugins/grok",
       "category": "development"
     },
@@ -62,14 +62,20 @@
     },
     {
       "name": "flows",
-      "description": "Named end-to-end build flows: gauntlet (plan → panel review → gated commits → verification → one PR per repo) and the gated-commit inner loop",
+      "description": "Named end-to-end build flows: gauntlet (plan \u2192 panel review \u2192 gated commits \u2192 verification \u2192 one PR per repo) and the gated-commit inner loop",
       "source": "./plugins/flows",
       "category": "development"
     },
     {
       "name": "forge",
-      "description": "Cross-harness plan → PR flow for gx, Cursor, and Claude Code: gauntlet, gated-commit, simplify, and ask-panel as slash-only skills",
+      "description": "Cross-harness plan \u2192 PR flow for gx, Cursor, and Claude Code: gauntlet, gated-commit, simplify, and ask-panel as slash-only skills",
       "source": "./plugins/forge",
+      "category": "development"
+    },
+    {
+      "name": "issue-workflows",
+      "description": "Convention-based GitHub issue workflows: file well-formed single issues, run cross-repo epics on a shared Projects v2 board, and keep labels and titles consistent across every repo",
+      "source": "./plugins/issue-workflows",
       "category": "development"
     }
   ]

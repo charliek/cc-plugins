@@ -1,0 +1,7 @@
+{
+  "name": "issue-workflows",
+  "description": "Convention-based GitHub issue workflows: file well-formed single issues, run cross-repo epics on a shared Projects v2 board, and keep labels and titles consistent across every repo",
+  "author": {
+    "name": "charliek"
+  }
+}
