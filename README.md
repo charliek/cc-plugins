@@ -17,6 +17,7 @@ Shared Claude Code plugins for development workflows.
 | [flows](plugins/flows/) | Commands | `/flows:gauntlet` and `/flows:gated-commit` for end-to-end build flows (plan → panel review → gated commits → PR) |
 | [docs-workflows](plugins/docs-workflows/) | Skills | `docs-workflows:docs-setup` and `docs-workflows:docs-migrate` — stand up a Zensical docs site, or port one from Material for MkDocs |
 | [forge](plugins/forge/) | Skills (slash-only) | `/forge:gauntlet`, `/forge:gated-commit`, `/forge:simplify`, `/forge:ask-panel` — plan → PR flow for gx, Cursor, and Claude Code |
+| [issue-workflows](plugins/issue-workflows/) | Commands | `/issue-workflows:setup`, `/issue-workflows:file`, `/issue-workflows:epic`, `/issue-workflows:status` — convention-based GitHub issues, and cross-repo epics on one Projects v2 board |
 
 ## Installation
 
@@ -33,6 +34,7 @@ Shared Claude Code plugins for development workflows.
 /plugin install flows@cc-plugins
 /plugin install docs-workflows@cc-plugins
 /plugin install forge@cc-plugins
+/plugin install issue-workflows@cc-plugins
 ```
 
 gx:
