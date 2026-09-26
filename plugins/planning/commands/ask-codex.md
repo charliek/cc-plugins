@@ -5,7 +5,7 @@ argument-hint: "[plan-file-path]"
 
 # Ask Codex Command
 
-Submit an implementation plan to Codex CLI for review, running `gpt-5.6-sol` at high reasoning effort (non-fast). Codex reads the plan and provides feedback on completeness, acceptance criteria, test coverage, and architectural alignment.
+Submit an implementation plan to Codex CLI for review, running `gpt-6-astra` at high reasoning effort through the codex-cli plugin's supervised runner. Codex reads the plan and provides feedback on completeness, acceptance criteria, test coverage, and architectural alignment.
 
 Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the active plan file from the current conversation context (typically in `~/.claude/plans/`).
 
@@ -14,6 +14,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 1. **Check prerequisites**: Verify Codex CLI is available
    - Run `codex --version 2>&1`
    - If the command fails, tell the user to install Codex CLI (`npm i -g @openai/codex`) and stop
+   - The review runs through the `codex-cli` plugin's runner (step 4), so that plugin must be installed too
 
 2. **Locate the plan file**:
    - If `$ARGUMENTS` contains a file path, expand `~` and resolve relative paths, then verify with `test -f`
@@ -30,27 +31,24 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    - [ ] **No conversation dependencies**: Fully understandable without prior chat context
    - [ ] **Repo conventions**: Matches the repo's existing patterns (naming, structure, tooling)
 
-4. **Submit the plan to Codex for review**: Pass the plan content inline in the Codex prompt. The plan is shell-expanded into the argument string — do not pipe via stdin.
+4. **Submit the plan to Codex for review**: run the plan through the codex-cli plugin's supervised runner, `scripts/codex-run.py`, on `gpt-6-astra` (OpenAI's frontier model — plan review is where its depth pays off). Astra is slow on a big plan, so the runner gives it a 25-minute cap and checks every 10 minutes that it is still making progress; that is longer than one foreground shell call allows, so launch it with `run_in_background: true` and you will be told when it exits. Pipe the plan in as data — never expand it into a quoted shell argument, where `$`, backticks, and quotes in the plan get interpreted.
 
-   Run the following as a **single Bash command** (the temp directory variable must remain in scope):
+```bash
+runner=${CODEX_RUN:-$(find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins \
+  -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1)}
+[ -f "$runner" ] || { echo "codex-run.py not found: install the codex-cli plugin (or set CODEX_RUN)"; exit 9; }
+test -f "<plan-file-path>" || { echo "plan not found"; exit 2; }
+{
+  cat <<'PLAN_REVIEW_9f3a2b1c'
+Review the following implementation plan. You may read repository files for context; do not edit anything. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? 5) Risks, gaps, or missing edge cases? Provide specific, actionable feedback organized by category, citing file:line where the repo contradicts the plan.
+---BEGIN PLAN---
+PLAN_REVIEW_9f3a2b1c
+  cat -- "<plan-file-path>"
+  echo '---END PLAN---'
+} | uv run --script "$runner" --model astra
+```
 
-   ```bash
-   tmpdir=$(mktemp -d) && \
-   echo "TMPDIR=$tmpdir" && \
-   codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" -s read-only -o "$tmpdir/codex.txt" \
-     "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? Provide specific, actionable feedback organized by category.
-
-   ---BEGIN PLAN---
-   $(cat "<plan-file-path>")
-   ---END PLAN---" \
-     2>"$tmpdir/stderr.txt"
-   ```
-
-   **Important:** `-m gpt-5.6-sol -c model_reasoning_effort="high"` pins the model and reasoning effort (non-fast). `-s read-only` lets Codex explore (read) the repo for context without edits — plan review needs no writes. (The old `--full-auto` flag was removed from `codex exec` and now errors.) `-o` captures the final response to a file.
-
-   **Note the temp directory path** from the `TMPDIR=...` output line — use it when reading output files and during cleanup.
-
-   Check the exit code. If non-zero, read `$tmpdir/stderr.txt` for error details and stop. Otherwise read `$tmpdir/codex.txt` for the review.
+   Use a fresh random suffix on the heredoc delimiter each time. The runner prints the review on stdout. Any non-zero exit means **no review** (the runner says why: stalled, capped, empty, usage-limited, auth) — report it; never treat it as "no findings". If a big plan stalls, retry once with a narrower brief (for example only the design and work-breakdown sections) rather than a longer cap.
 
 5. **Evaluate findings**: Analyze each piece of feedback from Codex
    - **Fix**: missing acceptance criteria, unclear exit conditions, incomplete test coverage, architectural misalignment, standalone readability issues, missing edge cases
@@ -59,4 +57,3 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 6. **Incorporate feedback**: Edit the plan file with worthwhile improvements
 
 7. **Report results**: Summarize what was refined (step 3), what Codex found, what was incorporated, and what was skipped
-   - Clean up: `rm -rf "$tmpdir"` (use the actual temp directory path from step 4)

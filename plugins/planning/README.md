@@ -6,7 +6,7 @@ Commands for submitting implementation plans to external AI reviewers and incorp
 
 ### `/planning:ask-codex [plan-file-path]`
 
-Submit a plan to Codex CLI (OpenAI) for review, running `gpt-5.6-sol` at high reasoning effort (non-fast). Pipes review instructions and plan content to `codex exec`, which evaluates the plan in the context of the current repository.
+Submit a plan to Codex CLI (OpenAI) for review, running `gpt-6-astra` (OpenAI's frontier model) at high reasoning effort. Pipes review instructions and plan content through the `codex-cli` plugin's supervised runner (`scripts/codex-run.py`: read-only, 25-minute cap, progress check every 10 minutes), which evaluates the plan in the context of the current repository.
 
 ### `/planning:ask-glm [plan-file-path]`
 
@@ -23,5 +23,6 @@ Run all three reviewers (Codex, GLM, CodeRabbit) in parallel, synthesize feedbac
 ## Prerequisites
 
 - [Codex CLI](https://developers.openai.com/codex/cli) installed (`npm i -g @openai/codex`) (for ask-codex and ask-panel)
+- The `codex-cli` plugin from this marketplace (its runner drives the Codex seat in ask-codex and ask-panel), and [`uv`](https://docs.astral.sh/uv/) to run it
 - [opencode CLI](https://opencode.ai) installed with Z.ai (`zai-coding-plan`) configured (for ask-glm and ask-panel)
 - CodeRabbit plugin installed (for ask-coderabbit and ask-panel) — uses the `coderabbit:code-reviewer` agent, no CLI required
