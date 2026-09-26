@@ -10,7 +10,7 @@ Run an adversarial code review through the Codex CLI. Frame it as a **challenge 
 Raw slash-command arguments:
 `$ARGUMENTS`
 
-Default model: `gpt-5.6-sol` at `model_reasoning_effort="high"` (override with `--model <id>` and/or `--effort <level>`).
+Default model: `gpt-6-astra` at `model_reasoning_effort="high"` (override with `--model <id>` and/or `--effort <level>`). A challenge review is where the frontier model earns its extra time; `/codex-cli:review` stays on `gpt-6-sol`.
 
 Core constraint:
 
@@ -44,7 +44,7 @@ Because the heredoc body includes user-controlled focus text, **always use a per
     echo; echo "--- staged diff ---"; git diff --cached
     echo; echo "--- unstaged diff ---"; git diff
     echo "=== END CHANGES ==="
-  } | codex exec -s read-only -m gpt-5.6-sol -c model_reasoning_effort="high" \
+  } | codex exec -s read-only -m gpt-6-astra -c model_reasoning_effort="high" \
     -o "$tmpdir/review.txt" - >"$tmpdir/stdout.txt" 2>"$tmpdir/stderr.txt"
   status=$?
   if [ $status -ne 0 ] || [ ! -s "$tmpdir/review.txt" ]; then
@@ -58,7 +58,7 @@ Because the heredoc body includes user-controlled focus text, **always use a per
 - **Branch / base scope** (replace `<base>` with the resolved ref, default `main`): use the same pipeline but stream `git diff --name-status <base>...HEAD` and `git diff <base>...HEAD`, and word the heredoc as "the diff of HEAD against <base>". **Validate the ref first** with `git rev-parse --verify --quiet "<base>"` and stop with an error if it doesn't resolve — a failed `git diff` inside the pipeline would otherwise feed Codex an empty diff that reads as "nothing to review" while the pipeline still exits 0.
 - **Very large diffs (~900+ changed lines):** do not stream the diff inline — redirect it to a file and point Codex at that path instead of the `=== BEGIN CHANGES ===` block. Working-tree scope: `git add -N . && git diff HEAD > "$tmpdir/changes.diff"` — the intent-to-add makes untracked files show up, and `HEAD` captures staged and unstaged together, so nothing in the working tree is silently dropped. Branch/base scope: `git diff <base>...HEAD > "$tmpdir/changes.diff"` with the same validated `<base>`. `$tmpdir` is already per-invocation, so parallel reviews never collide. The path must be emitted **outside** the quoted heredoc (nothing expands inside it) — `echo "Read this diff file first: $tmpdir/changes.diff"` in the same `{ … }` group, after the closing delimiter. Word the heredoc: "the changes are in the diff file named below; do NOT run `git diff`; read only the named files, sections, symbols, or line ranges you need; budget 8 minutes and at most 25 file reads; print the report and stop." Also demand a fixed per-item verdict — `no issue — why, file:line`, or a finding with `file:line` plus the concrete failure scenario — and the list of files + line ranges read. A streamed 30k-line diff burns the whole cap without ever reaching a verdict.
 - `-s read-only` keeps Codex read-only (it analyzes and may read files, but makes no edits). Use `timeout: 600000` on foreground runs. For `--background`, launch the pipeline with `run_in_background: true` and tell the user: "Codex adversarial review started in the background." Do not wait for it in this turn.
-- If the user passed `--model <id>`, use it in place of `gpt-5.6-sol`; if `--effort <level>`, use it in place of `high`.
+- If the user passed `--model <id>`, use it in place of `gpt-6-astra` (expand `sol`/`astra`/`luna` to `gpt-6-sol`/`gpt-6-astra`/`gpt-6-luna`; accept only ids matching `[A-Za-z0-9._-]+`); if `--effort <level>`, use it in place of `high` (allowlist: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, `ultra`).
 
 Present results:
 

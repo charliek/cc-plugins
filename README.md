@@ -11,7 +11,7 @@ Shared Claude Code plugins for development workflows.
 | [deploy](plugins/deploy/) | Commands | `/deploy:build` for date-based releases that trigger Docker builds |
 | [planning](plugins/planning/) | Commands | `/planning:ask-codex`, `/planning:ask-glm`, `/planning:ask-coderabbit`, `/planning:ask-panel` for AI-powered plan review |
 | [cursor](plugins/cursor/) | Commands | `/cursor:rescue`, `/cursor:review`, `/cursor:adversarial-review` — delegate coding tasks and reviews to the Cursor agent CLI |
-| [codex-cli](plugins/codex-cli/) | Commands | `/codex-cli:rescue`, `/codex-cli:review`, `/codex-cli:adversarial-review` — delegate coding tasks and reviews directly to `codex exec` (brokerless, parallel-safe) |
+| [codex-cli](plugins/codex-cli/) | Commands | `/codex-cli:rescue`, `/codex-cli:review`, `/codex-cli:adversarial-review` — delegate coding tasks and reviews directly to `codex exec` (brokerless, parallel-safe), plus the supervised `codex-run.py` runner the flows use for every scripted Codex review |
 | [grok](plugins/grok/) | Commands | `/grok:rescue` — delegate coding tasks to the Grok CLI (`grok -p`, brokerless, parallel-safe) |
 | [flutter-drive](plugins/flutter-drive/) | Skill | `flutter-drive:flutter-drive` — drive/debug/verify any StrideLabs Marionette-instrumented Flutter app over the Dart VM Service |
 | [flows](plugins/flows/) | Commands | `/flows:gauntlet` and `/flows:gated-commit` for end-to-end build flows (plan → panel review → gated commits → PR) |

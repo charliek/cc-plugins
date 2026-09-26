@@ -28,7 +28,31 @@ Check that the `codex` CLI is installed and authenticated, and report a readines
 
 ## Model selection
 
-All commands pin **`gpt-5.6-sol`** at **`model_reasoning_effort="high"`**, stated near the top of each command/subagent file (when bumping the default, update every command file plus this README). They deliberately do NOT inherit `~/.codex/config.toml`'s default, so runs are deterministic across machines. Override per call with `--model <id>` and `--effort none|minimal|low|medium|high|xhigh` (effort maps to `-c model_reasoning_effort="..."`).
+OpenAI's GPT-6 lineup has three tiers: **`gpt-6-astra`** (frontier, fable/opus-class), **`gpt-6-sol`** (the workhorse, between opus and sonnet), and **`gpt-6-luna`** (fast and cheap). `rescue` and `review` pin **`gpt-6-sol`**; `adversarial-review` pins **`gpt-6-astra`**, because a challenge review is where the deeper model pays off. All run at **`model_reasoning_effort="high"`**, stated near the top of each command/subagent file (when bumping a default, update every command file, `scripts/codex-run.py`, and this README). They deliberately do NOT inherit `~/.codex/config.toml`'s default — that is often `gpt-6-astra`, so an unflagged call would silently put a routine task on the expensive model. Override per call with `--model sol|astra|luna|<id>` and `--effort none|minimal|low|medium|high|xhigh|max|ultra` (effort maps to `-c model_reasoning_effort="..."`).
+
+## Supervised runner: `scripts/codex-run.py`
+
+The engine for **scripted** Codex calls — the gated-commit and branch reviews in `flows` and `forge`, and the plan-panel seats in `planning` and `forge`. The commands above stay interactive tools with their own recipes; automated flows call the runner instead of pasting a shell recipe, because a flow needs three things a recipe does badly:
+
+- **Runs longer than one shell call.** Reviews get 20 minutes on sol and 25 on astra, past the 10-minute ceiling of a single foreground call. Launch the runner in the background; the caller is told when it exits.
+- **Progress checks.** Every 10 minutes it checks that Codex's log is still growing and kills a run that has gone flat, instead of waiting out the cap. It kills the whole process group, so no leftover `codex exec` keeps the thread locked — including when the caller kills the runner.
+- **An honest outcome.** A distinct exit code per outcome: `0` ok, `2` usage, `3` failed, `4` empty, `5` stalled, `6` capped, `7` limited (usage limit, rate limit, or capacity — go straight to the fallback, don't retry codex), `8` auth, `9` codex missing. Anything but `0` is "no review", never "no findings".
+
+It always runs read-only, reads the prompt from `--prompt-file` (or stdin), and with `--changes-since <ref>` appends the change bundle itself — commits since `<ref>`, `git status`, `git diff <ref>`, and untracked file contents — without touching the index. `HEAD` means "uncommitted only"; a batch's base commit covers several commits at once. Past ~900 lines it writes the bundle to a file and tells Codex to read only what it needs, instead of inlining it.
+
+```bash
+uv run --script "$runner" --model sol --changes-since HEAD --prompt-file review-prompt.txt   # run_in_background: true
+```
+
+Standard-library Python 3.9+. Invoke it as `uv run --script "$runner"` (no dependence on the file's executable bit surviving a plugin install); `python3 "$runner"` works too. Callers outside this plugin locate it with:
+
+```bash
+runner=${CODEX_RUN:-$(find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins \
+  -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1)}
+[ -f "$runner" ] || { echo "codex-run.py not found: install the codex-cli plugin (or set CODEX_RUN)"; exit 9; }
+```
+
+Set `CODEX_RUN` to a checkout's copy to test changes before they're installed. Tests: `python3 -m unittest discover -s plugins/codex-cli/scripts/tests -v`.
 
 ## Knowledge baked in (learned the hard way)
 
@@ -72,5 +96,6 @@ All commands pin **`gpt-5.6-sol`** at **`model_reasoning_effort="high"`**, state
 
 - The Codex CLI installed: `npm install -g @openai/codex`.
 - Authenticated: `codex login`.
+- [`uv`](https://docs.astral.sh/uv/) for the runner's `uv run --script` invocation (or call it with `python3` 3.9+ instead).
 
 Run `/codex-cli:setup` to verify both.
