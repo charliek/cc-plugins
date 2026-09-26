@@ -28,9 +28,11 @@ names and the question-tool identity remain usable even when spawn is blocked.
 
 - **gx and Cursor:** stop and tell the parent to run the skill. Never attempt
   those harnesses without subagents. gx forbids nested spawns.
-- **Claude Code:** continue if the path only needs `codex exec` / `opencode run`
-  (gated-commit review, Claude panel seats). Stop if the work needs implementers
-  or simplify (those still need spawn).
+- **Claude Code:** the shell-only parts still work — the codex runner (the
+  gated-commit review and the astra panel seat) and `opencode run` (the GLM
+  seat, run directly instead of in its `Explore` wrapper). The CodeRabbit
+  panel seat and the `cursor-rescue` review fallback are subagents: skip
+  them and say so. Stop if the work needs implementers or simplify.
 - **Uncertain:** fail closed. Do not infer Claude Code from `codex` or
   `opencode` on PATH — gx and Cursor sessions often have those CLIs too. Ask
   once, or require `--harness claude`.
@@ -40,7 +42,7 @@ names and the question-tool identity remain usable even when spawn is blocked.
 `--harness gx|cursor|claude` in the arguments overrides this list.
 
 1. **Cursor** — `subagent_type` values include camelCase `generalPurpose`, and/or the question tool is `AskQuestion` (not `AskUserQuestion`).
-2. **gx** — built-in types include kebab `general-purpose` **and** kebab `plan`, and/or the spawn tool's aliases include `spawn_subagent`. The advertised name may be `task` or `Task`; do not treat `Task` alone as Cursor.
+2. **gx** — built-in types include kebab `general-purpose` **and** kebab `plan`, and/or the spawn tool's aliases include `spawn_subagent`. The advertised name may be `task` or `Task`; do not treat `Task` alone as Cursor. Stock `grok` detects the same way; the one difference that matters is that it never has GPT models, so its Codex seats go through the runner (see the tables).
 3. **Claude Code** — the spawn tool is `Agent`, and/or the question tool is `AskUserQuestion`.
 
 If none match, ask once via the question tool, then proceed.
@@ -52,37 +54,62 @@ Fable-class orchestrates and implements only the single most critical/complex pi
 | Role | Claude Code | gx | Cursor |
 |---|---|---|---|
 | Fable-class — orchestrator; implements only the single most critical piece | `fable` | `fireworks/kimi-k3` | `claude-opus-5-thinking-high` |
-| Opus-class — complex/subtle implementation | `opus` | `grok-4.6` | `cursor-grok-4.6-high` |
+| Opus-class — complex/subtle implementation | `opus` | `grok-4.7` | `grok-4.7-high` |
 | Sonnet-class — routine implementation, explore, simplify reviewers + fixer | `sonnet` | `glm-5.3` | `composer-2.5` |
-| Correctness reviewer (Sol-first, read-only) | `codex exec -m gpt-5.6-sol -c model_reasoning_effort=high -s read-only` | `gpt-5.6-sol` explore subagent | `gpt-5.6-sol-high` explore subagent |
-| Reviewer fallback | `cursor:cursor-rescue` read-only → self-review | `grok-4.6` → self-review | `cursor-grok-4.6-high` → self-review |
-| Plan panel seats | `codex exec` (Sol), `opencode run` (GLM), `coderabbit:code-reviewer` | `gpt-5.6-sol`, `grok-4.6`, `glm-5.3` subagents | `gpt-5.6-sol-high`, `cursor-grok-4.6-high`, `gemini-3.7-flash-high` |
+| Codex reviewer (read-only; `sol` or `astra` per unit) | codex runner `--model sol\|astra` | `gpt-6-sol` / `gpt-6-astra` explore subagent (stock grok: the runner) | codex runner, from the orchestrator's shell |
+| Reviewer fallback (one) | `cursor:cursor-rescue` read-only (Grok 4.7), or the CodeRabbit CLI if Cursor is unavailable; else self-review | `grok-4.7` explore; else self-review | `grok-4.7-high` explore; else self-review |
+| Plan panel seats | codex runner `--model astra`, `opencode run` (GLM), `coderabbit:code-reviewer` | `gpt-6-astra`, `grok-4.7`, `glm-5.3` subagents (stock grok: runner for the astra seat) | codex runner `--model astra` (shell), `grok-4.7-high`, `gemini-3.7-flash-high` subagents |
 
-This table is the user's direct request for per-role models — always pass `model` on spawn. Prefix each subagent `description` with the model actually used, e.g. `(grok-4.6) Implement U2`.
+This table is the user's direct request for per-role models — always pass `model` on spawn. Prefix each subagent `description` with the model actually used, e.g. `(grok-4.7) Implement U2`; label runner calls the same way, e.g. `(gpt-6-sol) Review U2`.
+
+Cursor never gets an OpenAI model as a subagent: OpenAI models are leaving Cursor and were costly on this plan. Its Codex seats run through the codex CLI on the ChatGPT plan instead, the same way Claude Code's do.
 
 ## Spawn recipes
 
 **Writable** (implementers, simplify fixer): type `general-purpose` / `generalPurpose`. Omit `isolation` for sequential work (shared workspace; parent must see the edits). Parallel implementers are the exception — never two in one tree; gauntlet Phase 4 has the per-harness isolation rule.
 
-**Read-only** (reviewers, panel seats): type `explore`. Paste the material to review inline in the prompt (full plan text; `git diff` / `git diff --cached` / untracked file contents). gx `explore` has read/list/search only — no shell — so never ask it to discover the diff itself.
+**Read-only** (reviewers, panel seats): type `explore`. Paste the material to review inline in the prompt (full plan text; the `--bundle-only` change bundle from §Codex runner). gx `explore` has read/list/search only — no shell — so never ask it to discover the diff itself.
 
-**Sequential** (implementer, fixer, Sol reviewer): `run_in_background: false`, or spawn then immediately wait on the task-output tool. Do not proceed until it finishes.
+**Sequential** (implementer, fixer): `run_in_background: false`, or spawn then immediately wait on the task-output tool. Do not proceed until it finishes. **Reviewers** are sequential too — nothing proceeds until the review is back — but spawn them with `run_in_background: true` and wait in 10-minute slices, so the progress checks and caps below can happen; launch a runner call in the background for the same reason (it also outlives one shell call).
 
 **Parallel** (panel seats, simplify reviewers): `run_in_background: true`, then batch-wait with the task-output tool (`get_task_output` / `get_command_or_subagent_output` / `AwaitShell` equivalent) before synthesis.
 
-**10-minute reviewer cap:** wait up to 10 minutes, then kill via `kill_task` / `kill_command_or_subagent` / `TaskStop` (or the harness equivalent). A killed or empty review is a failure, never "no findings", and triggers the fallback.
+**Reviewer caps: 20 minutes, 25 for astra, with a progress check every 10.** The codex runner enforces this itself. For reviewer and panel-seat *subagents*, do it by hand: at each 10-minute mark, confirm the subagent is still producing (new tool calls or output since the last check); kill a flat one early rather than waiting out the cap, and kill at the cap regardless, via `kill_task` / `kill_command_or_subagent` / `TaskStop` (or the harness equivalent). A killed or empty review is a failure, never "no findings", and triggers the fallback.
 
 **gx `run_in_background` defaults true.** Always set it explicitly.
 
-**If Cursor `Task` rejects a slug** (including `cursor-grok-4.6-high`): do not retry with `…-fast`. Report the spawn failure and use the next role fallback (self-review for a reviewer; stop and ask for an implementer).
+**If Cursor `Task` rejects a slug** (including `grok-4.7-high`): do not retry with `…-fast`. Report the spawn failure and use the next role fallback (self-review for a reviewer; stop and ask for an implementer).
 
-## Sol-first contract
+## Codex runner
 
-Correctness review is Sol-first, not Sol-only. Fallbacks only on auth failure, credit/rate limit, empty output, or cap kill. Record the reviewer that actually ran in the commit message, e.g. `review: gpt-5.6-sol` or `review: grok-4.6 (Sol 401)`. If every route fails, self-review, say so in the commit message, and surface it in the final status — never commit silently unreviewed.
+`scripts/codex-run.py` in the **codex-cli** plugin is the one way forge shells out to Codex (Claude Code, Cursor, and stock grok; gx too when its native GPT-6 seat is unavailable). It is read-only; caps sol at 20 minutes and astra at 25; checks every 10 minutes that Codex's output is still growing and kills a flat run early; kills the whole process tree on every exit path; and with `--changes-since <ref>` appends the change bundle itself (commits since `<ref>`, status, diff, untracked files — a diff *file* past ~900 lines). Install the codex-cli plugin on every harness forge runs on — even gx uses it, for `--bundle-only` and as the fallback route. Locate it:
 
-**OpenRouter Sol is never auto-selected.** `openrouter/gpt-5.6-sol` (and terra/luna twins) are metered. ChatGPT-plan `gpt-5.6-sol` is the only Sol gx may spawn. Use an OpenRouter Sol id only when the human explicitly says it is OK for this run.
+```bash
+runner=${CODEX_RUN:-$(find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins \
+  -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1)}
+[ -f "$runner" ] || { echo "codex-run.py not found: install the codex-cli plugin (or set CODEX_RUN)"; exit 9; }
+uv run --script "$runner" --model sol --changes-since HEAD --prompt-file "<prompt file>"
+```
 
-gx Sol effort is not settable per spawn. Recommend `[model."gpt-5.6-sol"].reasoning_effort = "high"` in `~/.grok/providers.toml`, then restart gx.
+Shell variables don't survive between tool calls, so resolve it once and use the absolute path in later calls. It needs `uv` (`python3 "$runner"` works the same without it). Launch it with the shell tool in the background (`run_in_background: true` or the harness equivalent) and wait for its exit. Exit `0` prints the review on stdout. `--changes-since <ref> --bundle-only` prints the same change bundle without running codex, for reviewers that aren't codex (native subagents, fallbacks, simplify); `<ref>` is `HEAD` for uncommitted changes. If codex-cli isn't installed, say so and build the bundle by hand from the repo root: `git log --oneline <ref>..HEAD`, `git status --short --untracked-files=all`, `git diff-index -p -M --textconv <ref>`, and the untracked files' contents — as a file once it passes ~900 lines. Anything else is "no review": `3` failed, `4` empty, `5` stalled, `6` capped, `7` usage limit / rate limit / capacity (never retry codex — same quota), `8` auth, `9` codex or the runner missing.
+
+## Codex-first review contract
+
+Correctness review is Codex-first, not Codex-only, and tiered like implementation: **`gpt-6-sol`** for routine units, **`gpt-6-astra`** for units that are complex or subtle (the opus/fable bar) or touch concurrency/ordering, data integrity, auth/security, money, migrations, or wire protocols. The plan's `review` mark decides; `plan.md` defines it. Fall back only when the Codex route fails (non-zero runner exit, spawn/auth failure, empty, stalled, or capped) — **one** fallback per review, per the table. Record the reviewer that actually ran in the commit message, e.g. `review: gpt-6-sol`, `review: gpt-6-astra (covers U3–U5)`, or `review: grok-4.7 (codex usage limit)`. If every route fails, self-review, say so in the commit message, and surface it in the final status — never commit silently unreviewed.
+
+**OpenRouter GPT models are never auto-selected.** `openrouter/gpt-*` ids (any `gpt-6-*` or `gpt-5.6-*` twin) are metered. On gx, spawn only the ChatGPT-plan `gpt-6-sol` / `gpt-6-astra`; use an OpenRouter id only when the human explicitly says it is OK for this run.
+
+**gx native seats.** gx cannot set reasoning effort per spawn, so pin it per model in `~/.grok/providers.toml` and restart gx:
+
+```toml
+[model."gpt-6-sol"]
+reasoning_effort = "high"
+
+[model."gpt-6-astra"]
+reasoning_effort = "high"
+```
+
+gx ships a `gpt-6-astra` preset; `gpt-6-sol` arrives with charliek/grok-build#21. Until a gx build lists it, or on stock grok (no GPT models at all), a rejected `gpt-6-*` spawn is not a failed review: run the same review through the codex runner from the orchestrator's shell instead.
 
 ## Plans directory
 

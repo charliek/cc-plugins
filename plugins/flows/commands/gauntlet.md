@@ -1,24 +1,31 @@
 ---
-description: Full build flow — discovery, panel-reviewed plan, gated commits, verification, PR(s) watched to green
-argument-hint: "<scope brief: workstreams, constraints, what done looks like>"
+description: Full build flow — discovery, panel-reviewed plan, executor pause, gated milestone commits, verification, PR(s) watched to green
+argument-hint: "<scope brief: workstreams, constraints, what done looks like> | <panel-reviewed plan file to execute>"
 ---
 
 # Gauntlet — the full plan → PR flow
 
 Run a substantial piece of work end-to-end: discovery, a written plan
-pressure-tested by an AI panel, implementation as small gated commits,
-verification beyond the automated tests where needed, and one PR per repo
-shepherded to green. Stop before any release/deploy.
+pressure-tested by an AI panel, a pause for the user to pick the executor,
+implementation as gated milestone commits, verification beyond the automated
+tests where needed, and one PR per repo shepherded to green. Stop before any
+release/deploy.
 
 `$ARGUMENTS` is the scope brief: the workstreams, constraints, pinned
 preferences, and anything the user already knows they want. Treat it as the
 requirements document; when it pins a decision, that decision is settled.
 
-The user is typically away. Work autonomously: proceed on your own for
-decisions already aligned in the brief or plan, and for choices where one
-option is clearly the winner. Stop only for one-way doors, decisions with
-large rework potential, or destructive actions that weren't discussed and
-aligned on. Deliver a status update at the end.
+**Resuming from a plan.** If `$ARGUMENTS` names an existing plan file that
+has been through the panel (its header records the panel corrections), this
+is the execution half of a paused run: read the plan, do Phase 0, and start
+at Phase 4. The plan is the requirements document now; anything else in
+`$ARGUMENTS` is extra direction for the run.
+
+Once execution starts the user is typically away. Work autonomously: proceed
+on your own for decisions already aligned in the brief or plan, and for
+choices where one option is clearly the winner. Stop only for one-way doors,
+decisions with large rework potential, or destructive actions that weren't
+discussed and aligned on. Deliver a status update at the end.
 
 ## Phase 0 — Conventions
 
@@ -81,8 +88,8 @@ Write the plan (at the Phase-0 location) in the house style:
    alternatives considered and why they lost; avoid "decide at
    implementation" for anything user-visible or test-shaping
 4. Deviations / non-goals
-5. Work breakdown — small gated commits (C1..Cn), each independently
-   shippable, each naming its gate
+5. Work breakdown — milestone commits (C1..Cn), each naming its gate,
+   implementer model, `simplify` mark, and `review` mark (see below)
 6. File map (indicative)
 7. Acceptance criteria — measurable, mapped 1:1 to workstreams
 8. Verification plan — what needs checking beyond the automated tests, and
@@ -94,6 +101,34 @@ Write the plan (at the Phase-0 location) in the house style:
 
 For multi-repo scopes, the work breakdown and acceptance criteria are
 grouped per repo, since each repo becomes its own PR.
+
+**Commit size.** Each commit is a standalone milestone: a coherent piece of
+work that builds, passes the gate, updates its tests alongside the code, and
+is worth reviewing on its own. Prefer fewer, meaningful milestones over many
+small steps — a long run of tiny commits multiplies gate, review, and
+bookkeeping time without making any of them better. Split only when a unit
+would be too large to review well, or when keeping it together would leave a
+commit that doesn't build. Numbered steps inside a milestone are an order of
+operations, not a commit count.
+
+**Simplify marks.** `/simplify` catches duplication and needless complexity
+and pays off most on changes that introduce core interfaces or abstractions
+other code will build on, or that land a lot of new logic. It costs real time
+and tokens, so decide it here, per commit, with a one-line reason
+(`simplify: yes — new storage interface` / `simplify: no — follows the
+existing handler pattern`); the panel can challenge it. Also say whether one
+pass over the whole branch before the PR is worth it — that catches
+duplication that only shows up across several commits. Skipping it is
+normal; a plan with no simplify passes is fine when nothing warrants one.
+
+**Review marks.** Every commit gets an external review before the branch is
+pushed; the plan says how. Name each commit's reviewer tier — `sol`
+(`gpt-6-sol`) for routine work, `astra` (`gpt-6-astra`) when the commit is
+complex or subtle (the bar that puts implementation on opus or fable) or
+touches concurrency/ordering, data integrity, auth/security, money,
+migrations, or wire protocols — and group small consecutive sol commits into
+batches that share one review where that is more efficient
+(`review: sol, batch C3–C5`). Astra commits stand alone.
 
 ## Phase 3 — Panel review
 
@@ -108,15 +143,43 @@ grouped per repo, since each repo becomes its own PR.
 - If the planning plugin isn't installed, do a self-review against the
   §Phase-2 checklist and say the panel was skipped.
 
+## Phase 3b — Pause for the executor decision
+
+After the panel, **stop and hand back to the user** unless the brief
+explicitly says to run straight through. Planning is where top-tier judgment
+pays; execution against a pinned, panel-reviewed plan often doesn't need it,
+and a fresh session starts with a clean context. Deliver:
+
+- the plan path and a short summary of the panel's corrections,
+- a recommendation on who should orchestrate execution — opus when the plan
+  is pinned tightly enough to follow, fable when a remaining piece still
+  needs top-tier judgment — and why,
+- a ready-to-paste kickoff prompt for a fresh session:
+  `/flows:gauntlet <plan-file-path>` plus any run-specific direction.
+
+Before pausing, settle the merge policy while the user is here (unless the
+brief already did): ask once, with the question tool, whether the PRs should
+auto-merge once CI is green and review findings are handled — with a merge
+commit, so each milestone stays visible in history — or be left open for
+their own review. Record the answer in the plan header; Phase 6 follows it.
+
+If the brief says to run straight through, record the merge policy it gives
+(default: leave open) and continue to Phase 4.
+
 ## Phase 4 — Implementation (gated commits)
 
 - Per changed repo: one feature branch (`feature/plan-NNN-<slug>`), one PR,
-  many small commits.
+  a handful of milestone commits.
 - For each planned commit: implement with a subagent given the plan section
   as its authoritative spec (subagent does NOT commit), then run
-  `/flows:gated-commit` for the gate → conditional simplify → capped review
-  → commit loop. Review intensity scales with the gravity of the change
-  (see gated-commit).
+  `/flows:gated-commit` for the gate → simplify (if marked) → review →
+  commit loop, passing the commit's `simplify` and `review` marks. Batched
+  commits land with `review: pending` and are covered by the batch's closing
+  review (see gated-commit).
+- **Nothing is pushed until every commit is covered** by an external review,
+  a recorded self-review when every reviewer route failed, or
+  `review: skipped (docs-only)` — including fix-up, docs, and CI commits
+  added along the way.
 - Every implementer brief says **"run the gate synchronously, in the
   foreground"** — subagents that background a long gate report success before
   it has finished.
@@ -145,6 +208,13 @@ grouped per repo, since each repo becomes its own PR.
   the app (e.g. which automation tool is safe for which pages).
 - If the implementer's result deviates from the plan, either fix the code or
   amend the plan — never leave them contradicting each other.
+- Before the push, per repo: run the **whole-branch simplify** pass if the
+  plan called for one (scoped to the merge-base with the default branch; its
+  fixes land as their own gated commit), and a **branch-level review** when
+  the PR has three or more commits that touch shared surfaces — the codex
+  runner with `--changes-since <merge-base with the default branch>`, astra
+  when the commits interact subtly, sol otherwise, same fallback as
+  gated-commit.
 
 ## Phase 5 — Verification record
 
@@ -171,18 +241,28 @@ Per repo that changed:
    CodeRabbit can show as "pass" with no review body). For each finding:
    fix it, or reply on the thread with the disposition rationale and note
    accepted risks in the PR body. Never silently ignore a finding.
-4. **Default: leave the PR open** — green, findings reacted to, ready for
-   the user's own review and merge decision. Merge yourself
-   (`/git-commands:merge-pr`, or `gh pr merge` if that plugin isn't
-   installed) ONLY if the scope brief or plan explicitly requested
-   auto-merge.
+   **A rate-limited CodeRabbit is not a blocker.** Every commit already had
+   an external review, so if CodeRabbit on the PR is rate-limited, don't wait
+   for it or re-trigger it. If the PR as a whole genuinely needs another look
+   (commits interact in ways no single review saw), run the branch-level
+   review from Phase 4 locally, with the same rules, rather than through
+   CodeRabbit.
+   Findings CodeRabbit *did* post still get fixed or answered.
+4. **Merge per the plan's recorded policy.** Auto-merge only when the plan
+   header or brief says so: `/git-commands:merge-pr`, answering its
+   merge-strategy question from the recorded policy (a merge commit) instead
+   of asking again — or `gh pr merge --merge --delete-branch` if that plugin
+   isn't installed. Otherwise leave the PR open — green, findings reacted
+   to, ready for the user's own review and merge decision.
 5. **Never release/deploy** unless the brief explicitly says otherwise.
 
 ## Final status update
 
-Lead with the outcome (PR links — one per repo — ready-for-review or
-merged-if-requested, or blocked). Then per workstream: what shipped and the
-decisions made along the way — call out especially any decision made during
-the flow that the user wasn't part of. Then process notes: review findings
-and dispositions, anything fixed that predated the work, anything
-deliberately left untouched, and follow-ups noted as future work.
+At the Phase 3b pause, the status update is the handoff described there. At
+the end of a run, lead with the outcome (PR links — one per repo —
+ready-for-review or merged-if-requested, or blocked). Then per workstream:
+what shipped and the decisions made along the way — call out especially any
+decision made during the flow that the user wasn't part of. Then process
+notes: review findings and dispositions, anything fixed that predated the
+work, anything deliberately left untouched, and follow-ups noted as future
+work.

@@ -54,21 +54,18 @@ chat history.
 
 ## Standalone units
 
-A unit is one independently shippable slice: it builds, passes the per-commit
-gate, and can be reviewed on its own. Name them U1..Un in suggested order.
-Each unit names its implementer tier (sonnet-class default; opus-class if
-complex/subtle; fable-class only for the single most critical piece, if any)
-and its gate.
+A unit is one **milestone**: a coherent piece of work that builds, passes the per-commit gate, updates its tests alongside the code, and is worth reviewing on its own. Name them U1..Un in suggested order.
 
-**Prefer fewer units.** Split only when keeping the work together would make
-the slice too large to review, or would force a commit that does not build
-or that is scaffolding with no user-visible or testable value. Combining
-tightly coupled edits into one unit is the default.
+**Prefer fewer, meaningful milestones over many small steps.** A long run of tiny commits multiplies gate, review, and bookkeeping time without making any of them better. Split only when keeping the work together would make the slice too large to review well, or would force a commit that does not build or that is scaffolding with no user-visible or testable value. Combining tightly coupled edits into one unit is the default. The ~400 changed lines / ~10 files figure is an **upper bound for code**, not a target and not a reason to split; it does not apply to prose-only work. Numbered steps inside a unit are an order of operations, not a commit count.
 
-The ~400 changed lines / ~10 files figure is an **upper bound for code**,
-not a target and not a reason to split. It does not apply to prose-only
-work. Numbered items in a breakdown are an order of operations, not a
-required commit count.
+Each unit names four things:
+
+- **Gate** — the commands that must pass.
+- **Implementer tier** — sonnet-class by default; opus-class if complex/subtle; fable-class only for the single most critical piece, if any.
+- **`simplify: yes/no` — with a one-line reason.** Simplify catches duplication and needless complexity; it pays off on units that introduce core interfaces or abstractions other code will build on, or land a lot of new logic, and costs real time otherwise (bar in `simplify.md`). Skipping it is normal. Also say whether one whole-branch pass before the PR is worth it — that catches duplication that only shows up across several units.
+- **`review:` tier and batch.** Every unit gets an external review before the branch is pushed. `sol` (`gpt-6-sol`) for routine work; `astra` (`gpt-6-astra`) when the unit is complex or subtle (the opus/fable bar) or touches concurrency/ordering, data integrity, auth/security, money, migrations, or wire protocols. Small consecutive sol units may share one review — `review: sol, batch U3–U5`, reviewed when U5 closes the batch (`gated-commit.md` §4). Astra units stand alone.
+
+The panel can challenge any of these marks, like any other decision in the plan.
 
 ## After the file exists
 

@@ -15,27 +15,32 @@ Do not broaden past that scope unless needed to understand existing patterns. Pr
 
 ## 2. Bar (skip vs run)
 
-**Skip** (report "skipped: …" and stop) when the scoped diff is:
+Simplify is good at catching duplication and needless complexity, and it pays off most on changes that introduce core interfaces or abstractions other code will build on, or that land a lot of new logic. It also costs real time and tokens — a median of ~5 minutes, a long tail past 15 — and most small changes give it nothing to find. So it is a judgment call; skipping it is normal.
 
-- a pure deletion, move/rename, config-only, or docs-only change, or
-- a small single-file mechanical edit that matches none of the triggers below.
+Inside a gauntlet, the plan's `simplify` mark decides (`plan.md`), adjusted when the diff came out different from planned. Standalone, or when adjusting:
 
-**Run** when any one is true:
+**Good fits** — run when any is true:
 
-- ≥ ~150 changed lines (adds + deletes) of non-excluded files, or
-- a new module/file with real logic, or
-- the same pattern at ≥ 3 sites, or
-- the orchestrator judges complexity/risk worth a pass.
+- the change introduces a core interface, abstraction, module, or public API that other code will build on
+- it lands a lot of new logic
+- the same logic appears in several places (in the diff, or the diff repeats something that already exists)
+- a whole-branch pass before the PR, when duplication only shows up across several units
+
+**Usually skip** — report "skipped: …" and stop:
+
+- small or mechanical edits, moves and renames, pure deletions
+- config-only, docs-only, or test-only changes
+- changes that closely follow an existing pattern
 
 Tell the reviewers which decisions are pinned spec (from the plan or `$ARGUMENTS`) so they do not "simplify away" mandated behavior.
 
 ## 3. Material to send
 
-Build the review bundle the same way `cursor:review` does: status, staged diff, unstaged diff, and contents of listed untracked files. gx `explore` cannot run `git`, so this bundle must be inline.
+Use the same change bundle the review gets: `uv run --script "$runner" --changes-since <base> --bundle-only` (`harness.md` §Codex runner; `<base>` is `HEAD` for uncommitted changes, the merge-base with the default branch for a whole-branch pass) prints commits since `<base>`, status, the diff, and untracked file contents — or, once it is big, a file path to read. gx `explore` cannot run `git`, so paste it inline. For an explicit non-diff scope (paths, symbols), send those instead.
 
 ## 4. Three parallel reviewers
 
-Spawn three `explore` subagents, sonnet-class `model` from the harness table, `run_in_background: true`, description prefixed `(model) Simplify: quality|performance|reuse`. Batch-wait (10-minute cap, then kill). Empty output is a failed seat.
+Spawn three `explore` subagents, sonnet-class `model` from the harness table, `run_in_background: true`, description prefixed `(model) Simplify: quality|performance|reuse`. Batch-wait with a 10-minute cap, then kill — deliberately shorter than the review caps: these are narrow sonnet-class passes that finish well inside it. Empty output is a failed seat.
 
 **Quality:** low-information comments; one-off helpers used once that can be inlined; nullable value proliferation; catch-all try/catch that swallows errors; unnecessary abstraction before reuse; weak type escape hatches (`any`, casts, non-null assertions); duplicated or derived state; dead or compatibility code.
 

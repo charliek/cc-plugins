@@ -1,8 +1,8 @@
 # Gated-commit procedure
 
-Run after reading `harness.md` (and `simplify.md` when the simplify bar fires). Take the current uncommitted working-tree changes through gate → conditional simplify → Sol-first review → dispositions → one commit. Do not push unless the caller says to.
+Run after reading `harness.md` (and `simplify.md` when a simplify pass is due). Take the current uncommitted working-tree changes through gate → simplify (when it earns its cost) → Codex review (per commit or per batch) → dispositions → one commit. Do not push unless the caller says to.
 
-`$ARGUMENTS` describes what the commit is. If empty, derive it from the diff.
+`$ARGUMENTS` describes what the commit is — inside a gauntlet, the plan section plus the unit's `simplify` and `review` marks (`plan.md`). If empty, derive it from the diff.
 
 ## 1. Discover the gate
 
@@ -16,109 +16,59 @@ All gate commands must pass before anything else. Fix failures in the diff's own
 
 Test-bearing diffs: rebuild before running (a stale binary passes vacuously), and give every new or converted functional test a negative control — break the expectation, watch it fail on that exact line, restore. An assertion never seen red is not evidence.
 
-## 3. Conditional simplify
+## 3. Simplify — when it earns its cost
 
-Run the simplify procedure (read `simplify.md`, execute inline — do not emit `/forge:simplify`) only when its bar fires. Sonnet-class reviewers and fixer; never fable-class. Re-run the relevant gate subset after applied fixes.
+Inside a gauntlet the plan's `simplify` mark decides; adjust when the diff came out different from the plan (bigger or more structural → add a pass; smaller → drop it) and say why in the commit message. Standalone, judge the diff against the bar in `simplify.md`. When a pass is due, run the simplify procedure inline (do not emit `/forge:simplify`) — sonnet-class, never fable-class — then re-run the relevant gate subset. Simplify output is ordinary code: it goes through the review below.
 
-## 4. Stream the diff
+## 4. Scope the review: one commit or one batch
 
-Build the review bundle (status, staged, unstaged, untracked contents) and paste it into the reviewer prompt. gx `explore` has no shell.
+Every commit is covered by an external correctness review before the branch is pushed, but coverage can be shared:
 
-Past ~900 changed lines, do not paste the diff: write it to a file and name that path in the prompt, for any reviewer that can read files. Prepare it with `git add -N . && git diff HEAD > "$(mktemp -d)/x.diff"` — the intent-to-add pulls in new files, `HEAD` captures staged and unstaged together so a partially staged tree isn't half reviewed, and the `mktemp -d` path is per-invocation so parallel reviews never clobber each other. Either way the prompt says: do NOT run `git diff` or re-derive the changes; read only the named files, sections, symbols, or line ranges; stay inside a stated read budget. A reviewer left to discover a big diff dumps tens of thousands of lines and hits the cap with no verdict.
+- **Per commit** is the default standalone.
+- **Batch**: small consecutive units may share one review of their combined diff when that is more efficient. The plan's `review` mark names the batch (`sol, batch U3–U5`); regroup at runtime if units came out different, and say so. Commit the earlier units after their gate with `review: pending (batch U3–U5)`. The batch **closes** on its last unit: before committing it, review everything since the batch's base commit, fix findings in any of the batch's units in that closing commit, and record `review: <model> (covers U3–U5)`.
+- **Astra-tier units are reviewed alone.**
 
-## 5. Sol-first correctness review (read-only)
+A batch that stalls or hits the cap is too big for one pass: split it into two narrower reviews rather than re-running it whole.
 
-Prompt for CORRECTNESS bugs, not style (simplify owns that). Scale adversarialness to gravity: routine commits get a straightforward pass; changes touching data integrity, auth/security, money, migrations, or concurrency get an explicitly adversarial prompt (assume the diff is wrong; hunt for the exploit/corruption path). Include:
+## 5. Codex review (read-only)
+
+**Tier** — from the unit's `review` mark, or standalone from the diff: `gpt-6-sol` for routine work; `gpt-6-astra` when the unit is complex or subtle (the opus/fable bar) or touches concurrency/ordering, data integrity, auth/security, money, migrations, or wire protocols.
+
+**Prompt** — CORRECTNESS bugs, not style (simplify owns that). Sol gets a straightforward correctness pass; astra gets an explicitly adversarial one (assume the diff is wrong; hunt for the exploit or corruption path) plus the plan's panel findings as a hunt list when a plan exists. Always include:
 
 - the spec/context (plan section or `$ARGUMENTS`)
 - specific failure modes tailored to the diff
-- a **HARD CAP of 10 minutes** — wait then kill; never wait unbounded
-- empty output is a FAILURE, not "no findings"
 - a fixed per-item verdict format: `no issue — why, file:line`, or a finding with `file:line` plus the concrete failure scenario; plus the list of files + line ranges the reviewer actually read
+- review-only: do not edit anything
 
-Skip this review entirely for docs-only diffs and record `review: skipped (docs-only)` in the commit message — there is no correctness surface to find.
+**Changes** — every route reviews the same bundle: commits since the scope's base, status, the diff against it, and untracked file contents. The codex runner builds it itself with `--changes-since <base>` (`HEAD` for one uncommitted unit, the batch's base commit for a batch). For any other reviewer, produce the identical text with `uv run --script "$runner" --changes-since <base> --bundle-only` and paste it inline — gx `explore` has no shell. (`$runner` is the absolute path resolved per `harness.md` §Codex runner, which also gives the plain-git fallback when codex-cli is not installed.) Past ~900 lines or ~100 KB the bundle is a file path plus instructions to read only what is needed; a reviewer left to discover a big diff itself dumps tens of thousands of lines and reaches the cap with no verdict.
 
-On any harness whose orchestrator has a shell, the CodeRabbit CLI is a complementary route rather than a duplicate of the Sol pass — invocation, the `-t uncommitted` spelling on older CLIs, and the process cap are in the Claude Code subsection below, and they apply verbatim wherever you can run it.
+Skip this review entirely for docs-only diffs and record `review: skipped (docs-only)` in the commit message — there is no correctness surface to find, and that line is the commit's coverage.
 
-### gx
+### Claude Code, Cursor, and stock grok — the codex runner
 
-Spawn `explore` with `model: gpt-5.6-sol`, `run_in_background: false` (or wait immediately). Description `(gpt-5.6-sol) Review …`. On auth/credit/rate-limit, empty output, or cap kill: `grok-4.6` explore, then self-review. Never spawn `openrouter/gpt-5.6-sol` unless the human opted in.
-
-### Cursor
-
-Spawn `explore` with `model: gpt-5.6-sol-high`. On auth/credit/rate-limit, empty, or cap kill: `cursor-grok-4.6-high` explore, then self-review. Never use `…-fast`.
-
-### Claude Code
-
-Direct `codex exec` (not the `codex-cli` agent). One Bash command; set the
-shell-tool timeout to 600000 **and** wrap the process so a hang is killed at
-600s (portable: `perl -e 'alarm 600; exec @ARGV' --`; `timeout 600` if that
-binary exists — macOS ships neither `timeout` nor `gtimeout`). A timeout is a
-failed review route.
-
-If a command guard also rejects heredocs, build the prompt + bundle into a
-file and redirect it instead — `codex exec … -o "$tmpdir/review.txt" - < "$tmpdir/prompt.txt"`
-is equally expansion-safe. If a guard rejects the wrapper shape (`perl -e … exec`,
-`bash -c`), drop it: the shell tool's own 600000 timeout is the cap, and on overrun kill
-the run by matching its unique `$tmpdir` in the command line — never a blanket
-`pkill -f 'codex exec'`, which also kills concurrent rescues. `echo "$tmpdir"`
-before launching, or a timeout leaves you without the value to match. Kill it
-you must: the leftover process keeps holding the thread, so `codex exec resume`
-then fails with `thread already has an active writer`. Rerun fresh and
-narrowed rather than resuming.
-
-The trailing `-` makes Codex read the piped bundle as the prompt. Put spec /
-`$ARGUMENTS`, tailored failure modes, and the 10-minute cap **in the bundle**
-(same context gx/Cursor reviewers get). Because that text is user-controlled,
-use a per-invocation random heredoc delimiter (shown as `REVIEW_9f3a2b1c`).
-Stream git output after the heredoc — do not interpolate the diff into the
-shell command.
+Write the prompt to a file, then launch the runner (`harness.md` §Codex runner) from the orchestrator's shell **in the background** and wait for its exit:
 
 ```bash
-tmpdir=$(mktemp -d)
-trap 'rm -rf "$tmpdir"' EXIT
-echo "$tmpdir"
-run_codex() { perl -e 'alarm 600; exec @ARGV' -- "$@"; }
-{
-  cat <<'REVIEW_9f3a2b1c'
-Review the uncommitted working-tree changes below for CORRECTNESS bugs (not style). This is review-only — do not edit anything. HARD CAP: 10 minutes; return partial findings rather than hanging. Empty output is a failure, not "no findings." Spec/context for this commit:
-REVIEW_9f3a2b1c
-  # Agent: append the plan section or $ARGUMENTS and specific failure modes here
-  # (cat a file you wrote, or a second quoted heredoc with a fresh random delimiter).
-  echo "=== BEGIN CHANGES ==="
-  echo; echo "--- changed files ---"; git status --short --untracked-files=all
-  echo; echo "--- staged diff ---"; git diff --cached
-  echo; echo "--- unstaged diff ---"; git diff
-  echo; echo "--- untracked file contents ---"
-  git ls-files --others --exclude-standard | while IFS= read -r f; do
-    echo "===== $f ====="
-    cat -- "$f"
-  done
-  echo "=== END CHANGES ==="
-} | run_codex codex exec -s read-only -m gpt-5.6-sol -c model_reasoning_effort="high" \
-  -o "$tmpdir/review.txt" - >"$tmpdir/stdout.txt" 2>"$tmpdir/stderr.txt"
-status=$?
-if [ $status -ne 0 ] || [ ! -s "$tmpdir/review.txt" ]; then
-  echo "codex exec review failed (exit $status). Last stderr/stdout:"
-  tail -n 40 "$tmpdir/stderr.txt" "$tmpdir/stdout.txt"
-  exit 1
-fi
-cat "$tmpdir/review.txt"
+uv run --script "$runner" --model sol --changes-since HEAD --prompt-file "<prompt file>"
+# astra: --model astra.  Batch-closing review: --changes-since <batch base commit>.
 ```
 
-If codex is unavailable, rate-limited, empty, or past the cap: fall back to
-`cursor:cursor-rescue` with `--read-only` and the same prompt. Instruct that
-agent **not** to retry with a `…-fast` model (forge never uses fast slugs);
-one empty or failed run → self-review. Do not retry codex on a rate limit.
-CodeRabbit's CLI, if installed, is the other route and a real complement —
-`coderabbit review --agent --uncommitted --include-untracked -c <instructions>.md`
-(older CLIs spell the scope `-t uncommitted`; check `coderabbit review --help`)
-found a contract bug (a counter bumped only on the success path) that codex
-and self-review both missed; prefer it when a sandboxed CLI reviewer refuses
-to start at all. It has no cap flag of its own, so bound the process the same
-way as codex — the same 600 s wrapper, or the harness's own reviewer cap — and
-treat a killed run as "no review", never "no findings", and fall through. If
-no external reviewer runs, self-review and say so in the commit message.
+Exit `0` prints the review. Any other exit is "no review" — take the fallback.
+
+**Fallback (one):**
+
+- **Claude Code:** `cursor:cursor-rescue` with the same prompt plus the `--bundle-only` text, stated as a **read-only review — make no edits** (that is what switches it to Cursor's `--mode plan`; it has no `--read-only` flag). It runs Grok 4.7 through Cursor; its foreground shell call is capped at 10 minutes, so hand it the file form for anything big. Tell it **not** to retry with a `…-fast` model — forge never uses fast slugs. If Cursor is unavailable, the CodeRabbit CLI instead — `coderabbit review --agent --uncommitted --include-untracked -c <instructions>.md` for one uncommitted unit, `--base-commit <batch base> --include-untracked` in place of `--uncommitted` for a batch (older CLIs spell the uncommitted scope `-t uncommitted`; check `coderabbit review --help`) — bounded by the shell tool's 600000 timeout; a killed run is "no review". CodeRabbit found a contract bug (a counter bumped only on the success path) that Codex and self-review both missed, so it is a real complement, not a formality.
+- **Cursor:** spawn `explore` with `model: grok-4.7-high` and the same prompt plus bundle. Never `…-fast`, never an OpenAI slug.
+- **Stock grok:** spawn `explore` with `model: grok-4.7` and the same prompt plus bundle.
+- After exit `7` (usage limit / rate limit / capacity), never retry codex — the retry hits the same quota.
+- If the fallback also fails, self-review and say so in the commit message.
+
+### gx — native GPT-6 subagent
+
+Spawn `explore` with `model: gpt-6-sol` or `model: gpt-6-astra`, `run_in_background: true`, description `(gpt-6-sol) Review …`, and the prompt plus the `--bundle-only` text inline. Then wait on its task output in 10-minute slices up to the cap (20 minutes; 25 for astra): after each slice, check it is still producing and kill a flat one early. A foreground spawn would block you from doing either. Never spawn an `openrouter/gpt-*` id unless the human opted in.
+
+If gx rejects the `gpt-6-*` slug (a build without the preset — see `harness.md`), that is not a failed review: run the codex runner from the orchestrator's shell instead, as above. On auth/credit/rate-limit, empty output, a flat subagent, or a cap kill: **one** fallback — `grok-4.7` explore with the same prompt — then self-review.
 
 ## 6. Disposition
 
@@ -132,6 +82,6 @@ If every review route failed and there is no recorded self-review, **do not comm
 
 ## 7. Commit
 
-One commit. Message = what changed and why, plus one line per notable finding and its disposition, plus `review: <model-or-self>`. Follow the repo's commit conventions. Do not push unless the calling flow or user says to.
+One commit. Message = what changed and why, plus one line per notable finding and its disposition, plus `review: <model-or-self> [(covers U…)]` — or `review: pending (batch U3–U5)` for a unit its batch will cover — and a `simplify:` line when a pass ran or a planned one was dropped. Follow the repo's commit conventions. Do not push unless the calling flow or user says to.
 
 Do not apply linter `--unsafe` autofixes.

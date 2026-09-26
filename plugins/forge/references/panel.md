@@ -45,50 +45,41 @@ Shared review questions (every seat):
 
 Weight by agreement and by evidence cited — do not treat any one seat as automatically strongest.
 
-### gx and Cursor — native `explore` subagents
+### gx and Cursor — `explore` subagents, plus the astra seat
 
-Spawn three `explore` children with `run_in_background: true`, `model` from the harness table, description prefixed `(model) Panel: …`. Paste the full plan between `---BEGIN PLAN---` / `---END PLAN---`. Instruct: read-only; you MAY read other repo files for context; do not edit; return specific actionable findings by category and severity.
+The OpenAI seat is always **`gpt-6-astra`**: plan review is where the frontier model pays for its extra time. Spawn the subagent seats as `explore` children with `run_in_background: true`, `model` from the table, description prefixed `(model) Panel: …`. Paste the full plan between `---BEGIN PLAN---` / `---END PLAN---`. Instruct: read-only; you MAY read other repo files for context; do not edit; return specific actionable findings by category and severity.
 
-| Seat | gx `model` | Cursor `model` |
+| Seat | gx | Cursor |
 |---|---|---|
-| Sol | `gpt-5.6-sol` | `gpt-5.6-sol-high` |
-| Grok | `grok-4.6` | `cursor-grok-4.6-high` |
-| Third | `glm-5.3` | `gemini-3.7-flash-high` |
+| Astra | `gpt-6-astra` subagent (stock grok: the codex runner) | the codex runner, from the orchestrator's shell |
+| Grok | `grok-4.7` subagent | `grok-4.7-high` subagent |
+| Third | `glm-5.3` subagent | `gemini-3.7-flash-high` subagent |
 
-Batch-wait (10-minute cap, then kill). Empty output is a failed seat, not "no findings".
+A runner seat is launched the same way as in the Claude Code section below — in the background, next to the subagent seats — and batch-waited with them.
 
-OpenRouter Sol is never a panel fallback. If ChatGPT-plan Sol fails, report that seat failed.
+Batch-wait with the harness caps: 20 minutes for the Grok and third seats, 25 for astra, checking every 10 minutes that each seat is still producing (the runner does this itself) and killing a flat one early. Empty output is a failed seat, not "no findings". A big plan that stalls astra gets one retry with a narrower brief (design and work-breakdown sections), not a longer cap.
+
+OpenRouter GPT ids are never a panel fallback. If the astra seat fails, report that seat failed.
 
 ### Claude Code — compatibility column (shell-outs)
 
 Check `codex --version` and `opencode --version`. Warn and skip a missing CLI. If none of the three can run, stop.
 
-**Sol** (if `codex` is available) — pipe the plan as **data**, never interpolate
-it into a double-quoted shell string. Set the shell-tool timeout to 600000 and
-kill the process at 600s (`perl -e 'alarm 600; exec @ARGV' --`). Trailing `-`
-reads stdin. `codex exec` is `-s read-only`.
+**Astra** (if `codex` is available) — through the codex runner (`harness.md` §Codex runner; `$runner` is its resolved absolute path), launched by the orchestrator itself as a background shell call, **not** inside a subagent: astra on a whole plan can outlast the 10-minute ceiling of a subagent's foreground shell call, and the runner supervises it (25-minute cap, killed early if flat for 10 minutes). Pipe the plan as **data**, never interpolate it into a quoted shell string; use a fresh random heredoc suffix.
 
 ```bash
-set -o pipefail
-tmpdir=$(mktemp -d)
-trap 'rm -rf "$tmpdir"' EXIT
-run_codex() { perl -e 'alarm 600; exec @ARGV' -- "$@"; }
-test -f "<plan-file-path>" || exit 1
+test -f "<plan-file-path>" || exit 2
 {
-  cat <<'EOF'
-Review the following implementation plan. Evaluate standalone readability, acceptance criteria, test coverage, and repo pattern alignment. Provide specific, actionable feedback organized by category.
+  cat <<'PANEL_9f3a2b1c'
+Review the following implementation plan. You may read repository files for context; do not edit anything. Evaluate standalone readability, acceptance criteria, test coverage, repo pattern alignment, and risks or missing edge cases. Provide specific, actionable feedback organized by category, citing file:line where the repo contradicts the plan.
 ---BEGIN PLAN---
-EOF
+PANEL_9f3a2b1c
   cat -- "<plan-file-path>"
   echo '---END PLAN---'
-} | run_codex codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" -s read-only \
-  -o "$tmpdir/codex.txt" - 2>"$tmpdir/stderr.txt"
-if [ $? -ne 0 ] || [ ! -s "$tmpdir/codex.txt" ]; then
-  cat "$tmpdir/stderr.txt"
-  exit 1
-fi
-cat "$tmpdir/codex.txt"
+} | uv run --script "$runner" --model astra
 ```
+
+A non-zero exit is a failed seat; report the runner's reason.
 
 **GLM** (if `opencode` is available) — pipe the plan via stdin; always use `--` before the message:
 
@@ -108,11 +99,10 @@ fi
 cat "$tmpdir/output.txt"
 ```
 
-Launch each of those as its own sonnet-class (`model: sonnet`) **`Explore`**
-subagent (`run_in_background: true`) that returns only the review text.
-`Explore` is read-only; do not use writable `general-purpose` for panel seats.
-The wrapper may run `codex`/`opencode` (those CLIs are `-s read-only` / stdin
-review) but must not edit the workspace.
+Launch GLM as its own sonnet-class (`model: sonnet`) **`Explore`** subagent
+(`run_in_background: true`) that returns only the review text. `Explore` is
+read-only; do not use writable `general-purpose` for panel seats. The wrapper
+may run `opencode` (stdin review) but must not edit the workspace.
 
 **CodeRabbit:** spawn `subagent_type: "coderabbit:code-reviewer"` with
 `run_in_background: true`, `model: sonnet` if the spawn tool accepts it
