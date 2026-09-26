@@ -49,7 +49,7 @@ PLAN_REVIEW_9f3a2b1c
 } | uv run --script "$runner" --model astra
 ```
 
-   Put the plan path in **single** quotes (write an embedded `'` as `'\''`): inside double quotes, a `$(…)` or backtick in the path would still run. Use a fresh random suffix on the heredoc delimiter each time. The runner prints the review on stdout. Any non-zero exit means **no review** (the runner says why: stalled, capped, empty, usage-limited, auth) — report it; never treat it as "no findings". If a big plan stalls, retry once with a narrower brief (for example only the design and work-breakdown sections) rather than a longer cap.
+   Put the plan path in **single** quotes (write an embedded `'` as `'\''`): inside double quotes, a `$(…)` or backtick in the path would still run. Use the resolved absolute path — `~` does not expand inside quotes, so write `/home/you/…`, not `~/…`. Use a fresh random suffix on the heredoc delimiter each time. The runner prints the review on stdout. Any non-zero exit means **no review** (the runner says why: stalled, capped, empty, usage-limited, auth) — report it; never treat it as "no findings". If a big plan stalls, retry once with a narrower brief (for example only the design and work-breakdown sections) rather than a longer cap.
 
 5. **Evaluate findings**: Analyze each piece of feedback from Codex
    - **Fix**: missing acceptance criteria, unclear exit conditions, incomplete test coverage, architectural misalignment, standalone readability issues, missing edge cases

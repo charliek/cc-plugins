@@ -6,7 +6,7 @@ get replaced with detected values during emission. Comments in `{:: …}`
 form are guidance for the LLM doing the emission, not text to keep in
 the output.
 
-```markdown
+````markdown
 # Releasing <REPO_NAME>
 
 The general release framework is `cc-plugins:release-workflows`; this
@@ -153,7 +153,7 @@ read [`cc-plugins/plugins/release-workflows/references/convention.md`](https://g
 in the framework repo. It defines the contract every file in this
 repo's `scripts/release/` and `.github/workflows/release.yml` is
 written against.
-```
+````
 
 ## Emission guidance
 

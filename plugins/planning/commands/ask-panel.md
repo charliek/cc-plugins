@@ -63,7 +63,7 @@ PLAN_REVIEW_9f3a2b1c
 } | uv run --script "$runner" --model astra
 ```
 
-   Put the plan path in **single** quotes (write an embedded `'` as `'\''`): inside double quotes, a `$(…)` or backtick in the path would still run. Use a fresh random heredoc suffix each time. A non-zero exit is a failed seat — report the runner's reason, never "no findings". If it stalls on a big plan, one retry with a narrower brief (design and work-breakdown sections only) beats a longer cap.
+   Put the plan path in **single** quotes (write an embedded `'` as `'\''`): inside double quotes, a `$(…)` or backtick in the path would still run. Use the resolved absolute path — `~` does not expand inside quotes, so write `/home/you/…`, not `~/…`. Use a fresh random heredoc suffix each time. A non-zero exit is a failed seat — report the runner's reason, never "no findings". If it stalls on a big plan, one retry with a narrower brief (design and work-breakdown sections only) beats a longer cap.
 
    **GLM reviewer** (if opencode CLI is available):
    Use the Agent tool with `subagent_type: "general-purpose"` and `run_in_background: true`.

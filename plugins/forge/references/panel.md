@@ -80,7 +80,7 @@ PANEL_9f3a2b1c
 } | uv run --script "$runner" --model astra
 ```
 
-A non-zero exit is a failed seat; report the runner's reason. Where `uv` is missing, `python3 "$runner" --model astra` is equivalent. Put the plan path in **single** quotes (write an embedded `'` as `'\''`): inside double quotes, a `$(…)` or backtick in the path would still run.
+A non-zero exit is a failed seat; report the runner's reason. Where `uv` is missing, `python3 "$runner" --model astra` is equivalent. Put the plan path in **single** quotes (write an embedded `'` as `'\''`): inside double quotes, a `$(…)` or backtick in the path would still run. Use the resolved absolute path — `~` does not expand inside quotes, so write `/home/you/…`, not `~/…`.
 
 **GLM** (if `opencode` is available) — pipe the plan via stdin; always use `--` before the message:
 

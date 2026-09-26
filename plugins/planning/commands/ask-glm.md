@@ -32,7 +32,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 
 4. **Submit the plan to GLM for review**: Pipe the plan content to opencode with a review prompt.
 
-   Run the following as a **single Bash command** (the temp directory variable must remain in scope):
+   Run the following as a **single Bash command** (the temp directory variable must remain in scope): Put the plan's resolved absolute path in the single quotes (`~` does not expand inside quotes; write an embedded `'` as `'\''`).
 
    ```bash
    tmpdir=$(mktemp -d) && \
