@@ -173,7 +173,7 @@ Before the push, per repo:
 - **Whole-branch simplify**, if the plan called for one: run the simplify
   procedure against the merge-base with the default branch; its fixes land
   as their own gated commit.
-- **Branch-level review** when the PR has three or more units that touch
+- **Branch-level review** when the PR has three or more commits that touch
   shared surfaces: the codex runner with `--changes-since <merge-base with
   the default branch>`, astra when the units interact subtly, sol otherwise;
   same fallback as gated-commit.

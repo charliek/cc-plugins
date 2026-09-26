@@ -68,18 +68,19 @@ Check `codex --version` and `opencode --version`. Warn and skip a missing CLI. I
 **Astra** (if `codex` is available) — through the codex runner (`harness.md` §Codex runner; `$runner` is its resolved absolute path), launched by the orchestrator itself as a background shell call, **not** inside a subagent: astra on a whole plan can outlast the 10-minute ceiling of a subagent's foreground shell call, and the runner supervises it (25-minute cap, killed early if flat for 10 minutes). Pipe the plan as **data**, never interpolate it into a quoted shell string; use a fresh random heredoc suffix.
 
 ```bash
-test -f "<plan-file-path>" || exit 2
+plan='<plan-file-path>'
+test -f "$plan" || exit 2
 {
   cat <<'PANEL_9f3a2b1c'
 Review the following implementation plan. You may read repository files for context; do not edit anything. Evaluate standalone readability, acceptance criteria, test coverage, repo pattern alignment, and risks or missing edge cases. Provide specific, actionable feedback organized by category, citing file:line where the repo contradicts the plan.
 ---BEGIN PLAN---
 PANEL_9f3a2b1c
-  cat -- "<plan-file-path>"
+  cat -- "$plan"
   echo '---END PLAN---'
 } | uv run --script "$runner" --model astra
 ```
 
-A non-zero exit is a failed seat; report the runner's reason.
+A non-zero exit is a failed seat; report the runner's reason. Where `uv` is missing, `python3 "$runner" --model astra` is equivalent. Put the plan path in **single** quotes (write an embedded `'` as `'\''`): inside double quotes, a `$(…)` or backtick in the path would still run.
 
 **GLM** (if `opencode` is available) — pipe the plan via stdin; always use `--` before the message:
 
@@ -87,8 +88,9 @@ A non-zero exit is a failed seat; report the runner's reason.
 set -o pipefail
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
-test -f "<plan-file-path>" || exit 1
-cat -- "<plan-file-path>" | opencode run \
+plan='<plan-file-path>'
+test -f "$plan" || exit 1
+cat -- "$plan" | opencode run \
   -m "zai-coding-plan/glm-5.3" \
   -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone? 2) Are acceptance criteria clear? 3) Does it include test coverage? 4) Does it match repo conventions? Provide specific, actionable feedback." \
   > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"

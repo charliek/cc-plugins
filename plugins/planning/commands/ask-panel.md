@@ -51,18 +51,19 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 runner=${CODEX_RUN:-$(find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins \
   -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1)}
 [ -f "$runner" ] || { echo "codex-run.py not found: install the codex-cli plugin (or set CODEX_RUN)"; exit 9; }
-test -f "<plan-file-path>" || { echo "plan not found"; exit 2; }
+plan='<plan-file-path>'
+test -f "$plan" || { echo "plan not found"; exit 2; }
 {
   cat <<'PLAN_REVIEW_9f3a2b1c'
 Review the following implementation plan. You may read repository files for context; do not edit anything. Evaluate standalone readability, acceptance criteria, test coverage, repo pattern alignment, and risks or missing edge cases. Provide specific, actionable feedback organized by category, citing file:line where the repo contradicts the plan.
 ---BEGIN PLAN---
 PLAN_REVIEW_9f3a2b1c
-  cat -- "<plan-file-path>"
+  cat -- "$plan"
   echo '---END PLAN---'
 } | uv run --script "$runner" --model astra
 ```
 
-   Use a fresh random heredoc suffix each time. A non-zero exit is a failed seat — report the runner's reason, never "no findings". If it stalls on a big plan, one retry with a narrower brief (design and work-breakdown sections only) beats a longer cap.
+   Put the plan path in **single** quotes (write an embedded `'` as `'\''`): inside double quotes, a `$(…)` or backtick in the path would still run. Use a fresh random heredoc suffix each time. A non-zero exit is a failed seat — report the runner's reason, never "no findings". If it stalls on a big plan, one retry with a narrower brief (design and work-breakdown sections only) beats a longer cap.
 
    **GLM reviewer** (if opencode CLI is available):
    Use the Agent tool with `subagent_type: "general-purpose"` and `run_in_background: true`.
@@ -74,7 +75,8 @@ PLAN_REVIEW_9f3a2b1c
    > ```bash
    > tmpdir=$(mktemp -d)
    > trap 'rm -rf "$tmpdir"' EXIT
-   > cat "<plan-file-path>" | opencode run \
+   > plan='<plan-file-path>'
+   > cat -- "$plan" | opencode run \
    >   -m "zai-coding-plan/glm-5.3" \
    >   -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone? 2) Are acceptance criteria clear? 3) Does it include test coverage? 4) Does it match repo conventions? Provide specific, actionable feedback." \
    >   > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"

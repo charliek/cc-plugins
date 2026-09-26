@@ -163,7 +163,12 @@ def build_changes(base: str, run_dir: Path) -> str:
             continue
         size = path.stat().st_size
         if size > UNTRACKED_MAX_BYTES or not is_text(path):
-            blocks.append(f"===== {name} (skipped: {size} bytes or binary) =====")
+            # Say so in a way any reviewer acts on: a big new source file must
+            # still be read, just not inlined.
+            blocks.append(
+                f"===== {name} (not inlined: {size} bytes or binary; "
+                "read it from the worktree before giving a verdict) ====="
+            )
             continue
         blocks.append(f"===== {name} =====\n{path.read_text(errors='replace')}")
     if blocks:

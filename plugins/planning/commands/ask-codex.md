@@ -37,18 +37,19 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 runner=${CODEX_RUN:-$(find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins \
   -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1)}
 [ -f "$runner" ] || { echo "codex-run.py not found: install the codex-cli plugin (or set CODEX_RUN)"; exit 9; }
-test -f "<plan-file-path>" || { echo "plan not found"; exit 2; }
+plan='<plan-file-path>'
+test -f "$plan" || { echo "plan not found"; exit 2; }
 {
   cat <<'PLAN_REVIEW_9f3a2b1c'
 Review the following implementation plan. You may read repository files for context; do not edit anything. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? 5) Risks, gaps, or missing edge cases? Provide specific, actionable feedback organized by category, citing file:line where the repo contradicts the plan.
 ---BEGIN PLAN---
 PLAN_REVIEW_9f3a2b1c
-  cat -- "<plan-file-path>"
+  cat -- "$plan"
   echo '---END PLAN---'
 } | uv run --script "$runner" --model astra
 ```
 
-   Use a fresh random suffix on the heredoc delimiter each time. The runner prints the review on stdout. Any non-zero exit means **no review** (the runner says why: stalled, capped, empty, usage-limited, auth) — report it; never treat it as "no findings". If a big plan stalls, retry once with a narrower brief (for example only the design and work-breakdown sections) rather than a longer cap.
+   Put the plan path in **single** quotes (write an embedded `'` as `'\''`): inside double quotes, a `$(…)` or backtick in the path would still run. Use a fresh random suffix on the heredoc delimiter each time. The runner prints the review on stdout. Any non-zero exit means **no review** (the runner says why: stalled, capped, empty, usage-limited, auth) — report it; never treat it as "no findings". If a big plan stalls, retry once with a narrower brief (for example only the design and work-breakdown sections) rather than a longer cap.
 
 5. **Evaluate findings**: Analyze each piece of feedback from Codex
    - **Fix**: missing acceptance criteria, unclear exit conditions, incomplete test coverage, architectural misalignment, standalone readability issues, missing edge cases

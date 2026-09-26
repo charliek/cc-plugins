@@ -362,6 +362,16 @@ class ChangesTests(RunnerCase):
         self.assertIn("line_1100 = 1100", Path(path).read_text())
         self.assertEqual(self.run_runner("ok", "--bundle-only").returncode, 2)
 
+    def test_oversized_untracked_files_tell_the_reviewer_to_read_them(self):
+        (self.repo / "generated.py").write_text("x = 1\n" * 50_000)
+        (self.repo / "logo.png").write_bytes(b"\x89PNG\0\0binary")
+        result = self.run_runner("ok", "--changes-since", "HEAD", "--bundle-only", cwd=self.repo, prompt="")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for name in ("generated.py", "logo.png"):
+            self.assertIn(f"===== {name} (not inlined:", result.stdout)
+        self.assertIn("read it from the worktree before giving a verdict", result.stdout)
+        self.assertNotIn("x = 1\nx = 1", result.stdout)
+
     def test_textconv_filters_apply(self):
         (self.repo / ".gitattributes").write_text("*.up diff=upper\n")
         self.git("config", "diff.upper.textconv", "tr a-z A-Z <")

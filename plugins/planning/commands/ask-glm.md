@@ -37,7 +37,8 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    ```bash
    tmpdir=$(mktemp -d) && \
    echo "TMPDIR=$tmpdir" && \
-   cat "<plan-file-path>" | opencode run \
+   plan='<plan-file-path>' && \
+   cat -- "$plan" | opencode run \
      -m "zai-coding-plan/glm-5.3" \
      -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? Provide specific, actionable feedback organized by category." \
      > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"
