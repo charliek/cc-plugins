@@ -26,7 +26,9 @@ Check that the `cursor-agent` CLI is installed and authenticated, and report a r
 
 ## Model selection
 
-All commands default to the **`cursor-grok-4.6-high`** model, stated near the top of each command/subagent file (when bumping the default, update every command file plus this README). Override per call with `--model <id>`. Cursor encodes reasoning level in the model id (e.g. `cursor-grok-4.6-high`, `gpt-5.6-sol-high`) — there is no separate effort flag. Run `cursor-agent --list-models` to discover available ids.
+All commands default to the **`grok-4.7-high`** model, stated near the top of each command/subagent file (when bumping the default, update every command file plus this README). Override per call with `--model <id>`. Cursor encodes reasoning level in the model id (e.g. `grok-4.7-high`, `grok-4.7-xhigh`) — there is no separate effort flag. Run `cursor-agent --list-models` to discover available ids.
+
+This plugin does not route OpenAI models through Cursor: OpenAI models are being removed from Cursor and were expensive on this plan. Use the `codex-cli` plugin for OpenAI models instead.
 
 ## Prerequisites
 

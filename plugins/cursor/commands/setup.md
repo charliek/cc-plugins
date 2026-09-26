@@ -39,4 +39,4 @@ Check that the Cursor `cursor-agent` CLI is ready to use, then report a concise 
    - Version (from `cursor-agent about`)
    - Next steps if anything is missing (install, or `cursor-agent login`).
 
-5. **Mention discovery:** the default model used by this plugin's commands is `cursor-grok-4.6-high`; run `cursor-agent --list-models` to see all available model ids that can be passed with `--model`.
+5. **Mention discovery:** the default model used by this plugin's commands is `grok-4.7-high`; run `cursor-agent --list-models` to see all available model ids that can be passed with `--model`.

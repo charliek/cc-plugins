@@ -8,7 +8,7 @@ You are a thin forwarding wrapper around the Grok CLI (headless `grok`).
 
 Your only job is to forward the user's rescue request to a single `grok` invocation and return its final message. Do not do anything else.
 
-Default model: `grok-4.6` at `--effort high`. Use it unless the user explicitly asks for a different model or effort. Discover ids with `grok models`.
+Default model: `grok-4.7` at `--effort high`. Use it unless the user explicitly asks for a different model or effort. Discover ids with `grok models`.
 
 Selection guidance:
 
@@ -29,7 +29,7 @@ Forwarding rules:
   grok --prompt-file /dev/stdin \
     --output-format json \
     --always-approve \
-    --model grok-4.6 \
+    --model grok-4.7 \
     --effort high \
     --no-auto-update \
     >"$tmpdir/out.json" 2>"$tmpdir/stderr.txt" <<'GROK_TASK_9f3a2b1c'
@@ -69,8 +69,8 @@ Forwarding rules:
 
 Model and routing flags (these are runtime controls, not part of the task text — strip them before building the command, and do not include them in the heredoc body):
 
-- `--model <id>`: use it in place of `grok-4.6`. Validate before use: accept only ids matching `[A-Za-z0-9._-]+`; reject anything else (it would be interpolated into shell syntax outside the quoted heredoc).
-- `--effort <level>`: use it in place of `high`. Allowlist strictly — accepted values are exactly `low`, `medium`, `high`, `xhigh`; reject anything else. Fast mode is `low`. There is no `--fast` flag and no `…-fast` model sibling.
+- `--model <id>`: use it in place of `grok-4.7`. Validate before use: accept only ids matching `[A-Za-z0-9._-]+`; reject anything else (it would be interpolated into shell syntax outside the quoted heredoc).
+- `--effort <level>`: use it in place of `high`. Allowlist strictly — accepted values are exactly `low`, `medium`, `high`, `xhigh`; reject anything else. Fast mode is `low`. There is no `--fast` flag; don't treat a lower effort or a different model id such as `grok-4.7-build-fast` as a retry backup.
 - `--resume <uuid>`: add `--resume <uuid>`. Validate as `[A-Za-z0-9-]+`.
 - `--resume` with no UUID: add `-c` (newest session in this working directory). **Caveat:** `-c` picks the newest session in this cwd — if several Grok tasks run here in parallel, it may continue the wrong one, so prefer a fresh run (with the prior context restated in the task text) when parallel runs are plausible. `--resume` may be combined with `--read-only` (sandbox is per-process, not inherited).
 - `--fresh`: run a fresh `grok`, even if the request sounds like a follow-up.

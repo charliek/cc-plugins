@@ -10,7 +10,7 @@ Hand this request to the Cursor `cursor-agent` CLI and return its output verbati
 Raw user request:
 $ARGUMENTS
 
-Default model: `cursor-grok-4.6-high` (override with `--model <id>`; run `cursor-agent --list-models` for ids).
+Default model: `grok-4.7-high` (override with `--model <id>`; run `cursor-agent --list-models` for ids).
 
 Build a single `cursor-agent` invocation. **Pass the task text via a quoted heredoc on stdin, never as an inline quoted argument** — this prevents `$(...)`, backticks, `$VAR`, quotes, and newlines in the task from being expanded by Bash. `cursor-agent -p` reads the prompt from stdin when no prompt argument is given.
 
@@ -19,7 +19,7 @@ Build a single `cursor-agent` invocation. **Pass the task text via a quoted here
 Write-capable run (the default):
 
 ```bash
-cursor-agent -p --force --trust --model cursor-grok-4.6-high <<'CURSOR_TASK_9f3a2b1c'
+cursor-agent -p --force --trust --model grok-4.7-high <<'CURSOR_TASK_9f3a2b1c'
 <task text exactly as the user gave it, with routing flags stripped>
 CURSOR_TASK_9f3a2b1c
 ```
@@ -27,7 +27,7 @@ CURSOR_TASK_9f3a2b1c
 Read-only run (when `--read-only` is present, or the user only wants review/diagnosis/research without edits) — replace `--force` with `--mode plan`:
 
 ```bash
-cursor-agent -p --mode plan --trust --model cursor-grok-4.6-high <<'CURSOR_TASK_9f3a2b1c'
+cursor-agent -p --mode plan --trust --model grok-4.7-high <<'CURSOR_TASK_9f3a2b1c'
 <task text>
 CURSOR_TASK_9f3a2b1c
 ```
@@ -37,7 +37,7 @@ Flag handling (strip these from the task text before placing it in the heredoc b
 - `--background`: run the `Bash` call with `run_in_background: true` and tell the user the Cursor task started in the background. Do not wait for it this turn.
 - `--wait` (or neither): run in the foreground with `timeout: 600000` (the maximum; Cursor tasks can run several minutes).
 - `--read-only`: use `--mode plan` instead of `--force`.
-- `--model <id>`: use it in place of `cursor-grok-4.6-high`. There is no `--effort` flag — reasoning level is part of the model id.
+- `--model <id>`: use it in place of `grok-4.7-high`. There is no `--effort` flag — reasoning level is part of the model id.
 - `--resume`: add `--continue` (continue the previous Cursor session). `--fresh`: do not. If neither is given and the user is clearly continuing prior Cursor work ("continue", "keep going", "apply the top fix", "dig deeper"), add `--continue`; otherwise run fresh.
 - `--trust` is always on: a headless run cannot answer the workspace-trust prompt, and the stall it causes is invisible — zero output until the timeout kills the run. Trusting is safe here: the run always targets a repo the user is already working in, and write-capable runs auto-approve with `--force` anyway.
 
@@ -45,5 +45,5 @@ Output:
 
 - Return the Cursor agent's stdout verbatim. Do not paraphrase, summarize, rewrite, or add commentary before or after it.
 - By default the run is write-capable (`--force`), so Cursor may edit files and run commands. Changes land in the current git repo and are reviewable via `git diff`.
-- On failure, do **not** fabricate a substitute answer — but retry ONCE with `--model cursor-grok-4.6-high-fast` (the priority-pool sibling — costlier, hence backup-only) when the failure is empty stdout or a `resource_exhausted`/reconnect-loop error (the two known transient Cursor-backend shapes). If the retry also fails, report the failure concisely (most actionable stderr lines); if `cursor-agent` looks missing or unauthenticated, direct the user to `/cursor:setup`; if one model repeatedly fails while others work, suggest re-checking `cursor-agent --list-models` for a delisted id.
+- On failure, do **not** fabricate a substitute answer — but retry ONCE with `--model grok-4.7-high-fast` (the priority-pool sibling — costlier, hence backup-only) when the failure is empty stdout or a `resource_exhausted`/reconnect-loop error (the two known transient Cursor-backend shapes). If the retry also fails, report the failure concisely (most actionable stderr lines); if `cursor-agent` looks missing or unauthenticated, direct the user to `/cursor:setup`; if one model repeatedly fails while others work, suggest re-checking `cursor-agent --list-models` for a delisted id.
 - If the user did not supply a request, ask what Cursor should investigate or fix before running.
