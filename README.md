@@ -55,3 +55,18 @@ Cursor: install `forge` from the cc-plugins marketplace, or symlink
    slash-only (`disable-model-invocation: true`); they are not required to be
    model-invoked.
 4. Register in `.claude-plugin/marketplace.json`
+
+## Checks
+
+CI (`.github/workflows/ci.yml`) runs on every PR and push to `main`. The same
+checks locally:
+
+```bash
+python3 -m unittest discover -s plugins/codex-cli/scripts/tests -v   # codex-run.py
+claude plugin validate .                                             # marketplace + plugin manifests
+python3 .github/scripts/check_doc_snippets.py                        # every bash/sh block in the docs parses
+```
+
+Shell snippets in plugin docs are copied and run by agents, so write
+placeholders inside quotes (`REPO="<owner>/<repo>"`): an unquoted `<…>`
+parses as a redirect.

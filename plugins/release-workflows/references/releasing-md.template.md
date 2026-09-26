@@ -104,8 +104,8 @@ If `mac` job's appcast step fails (the DMG IS on the Release):
 ```bash
 # From a Mac with the EdDSA key in keychain (account: roost-release)
 W=$(mktemp -d); chmod 700 "$W"
-SIGN_UPDATE=<repo-local sign_update path, e.g. mac/.build/artifacts/sparkle/Sparkle/bin/sign_update>
-GENERATE_KEYS=<sibling path to generate_keys>
+SIGN_UPDATE="<repo-local sign_update path, e.g. mac/.build/artifacts/sparkle/Sparkle/bin/sign_update>"
+GENERATE_KEYS="<sibling path to generate_keys>"
 
 # 1. Download the DMG that was uploaded by the build step
 gh release download v<X.Y.Z> --pattern "<DMG_PATTERN>" --dir "$W"
@@ -119,7 +119,7 @@ gh release download v<X.Y.Z> --pattern "<DMG_PATTERN>" --dir "$W"
 rm -f "$W/key"
 
 # 4. Append entry to docs/appcast.xml
-ROOST_VERSION=<X.Y.Z> ROOST_TAG=v<X.Y.Z> ROOST_SIGN_FILE="$W/sign.txt" \
+ROOST_VERSION="<X.Y.Z>" ROOST_TAG="v<X.Y.Z>" ROOST_SIGN_FILE="$W/sign.txt" \
   python3 mac/scripts/update-appcast.py
 
 # 5. Commit + push (admin bypasses the ruleset's ci-success rule)
