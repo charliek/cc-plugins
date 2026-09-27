@@ -54,7 +54,7 @@ uv run --script '<runner path>' --model sol --changes-since HEAD --prompt-file '
 # astra: --model astra.  Batch-closing review: --changes-since <batch base commit>.
 ```
 
-Exit `0` prints the review. Any other exit is "no review" — take the fallback.
+Inside a gauntlet, add `--out '<plan artifact folder>/reviews/<unit>.md'` to keep each review with the plan (the background task's output has it too). Exit `0` prints the review. Any other exit is "no review" — take the fallback.
 
 **Fallback (one):**
 

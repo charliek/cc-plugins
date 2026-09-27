@@ -132,8 +132,10 @@ marks from the plan's work breakdown). If empty, derive it from the diff.
       ```
 
       Astra: `--model astra`. A batch-closing review: `--changes-since
-      <batch base commit>`. `python3 '<runner path>'` works the same where
-      `uv` is missing.
+      <batch base commit>`. Inside a gauntlet, add
+      `--out '<plan artifact folder>/reviews/<commit>.md'` to keep each review
+      with the plan (the background task's output has it too).
+      `python3 '<runner path>'` works the same where `uv` is missing.
 
    Exit `0` prints the review. **Anything else is "no review", never "no
    findings"**: `3` failed, `4` empty, `5` stalled, `6` capped, `7` usage

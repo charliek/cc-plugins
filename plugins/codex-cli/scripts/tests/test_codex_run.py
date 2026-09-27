@@ -318,6 +318,18 @@ class ChangesTests(RunnerCase):
         self.assertIn(str(diff_file), prompt)
         self.assertIn("line_1100 = 1100", diff_file.read_text())
 
+    def test_large_changes_come_with_a_line_index(self):
+        (self.repo / "app.py").write_text("x = 42\n")
+        (self.repo / "big.py").write_text("".join(f"line_{i} = {i}\n" for i in range(1200)))
+        result = self.run_runner("ok", "--changes-since", "HEAD", "--keep", cwd=self.repo)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        prompt = self.recorded()["prompt"]
+        lines = (self.run_dir(result.stderr) / "changes.diff").read_text().split("\n")
+        for name, marker in (("app.py", "+x = 42"), ("big.py", "line_1199 = 1199")):
+            start, end = map(int, re.search(rf"  {name}: lines (\d+)-(\d+)", prompt).groups())
+            self.assertIn(marker, "\n".join(lines[start - 1:end]), name)
+        self.assertIn("read that file in slices".lower(), prompt.lower())
+
     def test_runs_from_a_subdirectory(self):
         (self.repo / "sub").mkdir()
         (self.repo / "sub" / "keep.txt").write_text("tracked\n")

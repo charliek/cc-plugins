@@ -90,6 +90,7 @@ AUTH = re.compile(r"\b401\b|unauthori[sz]ed|not logged in|codex login", re.IGNOR
 INLINE_MAX_LINES = 900
 INLINE_MAX_BYTES = 100_000
 UNTRACKED_MAX_BYTES = 200_000
+INDEX_MAX_ENTRIES = 300
 KILL_GRACE_SECONDS = 10.0
 CLASSIFY_TAIL_LINES = 15
 
@@ -182,10 +183,41 @@ def build_changes(base: str, run_dir: Path) -> str:
     diff_file.write_text(changes)
     return (
         f"\n\nThe changes under review are large, so they are in a file: {diff_file}\n"
-        "Read that file first. Do NOT run `git diff` or re-derive the changes. "
-        "After it, read only the specific files, symbols, or line ranges you need, "
-        "and list what you read in your report.\n"
+        "Do NOT run `git diff` or re-derive the changes. Read that file in slices by line "
+        f"range (for example `sed -n '120,480p' {diff_file}`): a whole-file read comes back "
+        "truncated. The index below gives each changed file's lines in it. Beyond that, read "
+        "only the specific files, symbols, or line ranges you need, and list what you read in "
+        "your report.\n" + index_of(changes)
     )
+
+
+def index_of(changes: str) -> str:
+    """Line ranges of each file's section in the changes file.
+
+    Long tool reads get truncated, so a reviewer has to read a big bundle in
+    slices; the index tells it which slice holds which file.
+    """
+    lines = changes.split("\n")
+    starts = []  # (line number, name or None for a section header)
+    for number, line in enumerate(lines, 1):
+        if line.startswith("diff --git "):
+            starts.append((number, line.rsplit(" b/", 1)[-1]))
+        elif line.startswith("===== ") and line.endswith(" ====="):
+            starts.append((number, line[6:-6].split(" (")[0]))
+        elif line.startswith("--- ") and line.endswith(" ---"):
+            starts.append((number, None))
+    entries = []
+    for i, (start, name) in enumerate(starts):
+        if name is None:
+            continue
+        end = starts[i + 1][0] - 1 if i + 1 < len(starts) else len(lines)
+        entries.append(f"  {name}: lines {start}-{end}")
+    if not entries:
+        return ""
+    shown = entries[:INDEX_MAX_ENTRIES]
+    more = len(entries) - len(shown)
+    tail = f"  … and {more} more files; search the file for `diff --git` or `=====` headers\n" if more else ""
+    return "Index:\n" + "\n".join(shown) + "\n" + tail
 
 
 def read_prompt(args: argparse.Namespace) -> str:
