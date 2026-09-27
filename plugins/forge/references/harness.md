@@ -68,7 +68,7 @@ Cursor never gets an OpenAI model as a subagent: OpenAI models are leaving Curso
 
 **Writable** (implementers, simplify fixer): type `general-purpose` / `generalPurpose`. Omit `isolation` for sequential work (shared workspace; parent must see the edits). Parallel implementers are the exception — never two in one tree; gauntlet Phase 4 has the per-harness isolation rule.
 
-**Read-only** (reviewers, panel seats): type `explore`. Paste the material to review inline in the prompt (full plan text; the `--bundle-only` change bundle from §Codex runner). gx `explore` has read/list/search only — no shell — so never ask it to discover the diff itself.
+**Read-only** (reviewers, panel seats): type `explore`. Paste the material to review inline in the prompt (full plan text; the `--bundle-only` change bundle from §Codex runner). A large bundle comes back from `--bundle-only` as a file path plus reading instructions — pass that through as-is: `explore` has read tools, and pasting tens of thousands of diff lines is exactly what the file form avoids. Only if the reviewer's read tool cannot reach that path, paste the file's contents instead. gx `explore` has read/list/search only — no shell — so never ask it to discover the diff itself.
 
 **Sequential** (implementer, fixer): `run_in_background: false`, or spawn then immediately wait on the task-output tool. Do not proceed until it finishes. **Reviewers** are sequential too — nothing proceeds until the review is back — but spawn them with `run_in_background: true` and wait in 10-minute slices, so the progress checks and caps below can happen; launch a runner call in the background for the same reason (it also outlives one shell call).
 
