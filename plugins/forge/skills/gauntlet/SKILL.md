@@ -141,11 +141,14 @@ per harness:
   the branch, or create the worktree yourself and launch the sub-agent *in* it
   as its working directory. Never two in a shared tree.
 
-Each isolated implementer hands back a patch, written with
-`git add -N . && git diff HEAD --binary > "$(mktemp -d)/x.patch"`: `HEAD` so a
-file it staged but did not commit is still included, `--binary` so the patch
-round-trips, and a path outside the worktree so the patch never intent-adds
-itself. The orchestrator applies it. An isolated worktree branches from
+Each isolated implementer hands back a patch, written with two plain
+commands — `git add -N .`, then
+`git diff HEAD --binary --output='<plan artifact folder>/<unit>.patch'`:
+`HEAD` so a file it staged but did not commit is still included, `--binary`
+so the patch round-trips, and an absolute path outside the worktree so the
+patch never intent-adds itself. No `$(mktemp -d)`, `&&`, or redirect: a
+worktree-isolated session refuses git inside a construct it can't verify. The
+orchestrator applies it. An isolated worktree branches from
 `origin/<default-branch>` unless the harness is configured to branch from
 HEAD, so by default use them only for units independent of the branch's
 unmerged work. Resolve and verify that base **before spawning**, since the

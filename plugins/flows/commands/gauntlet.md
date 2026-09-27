@@ -185,12 +185,14 @@ If the brief says to run straight through, record the merge policy it gives
   it has finished.
 - **Never two implementers in one tree.** Sequential implementers edit the
   branch tree directly (no isolation). Parallel ones each need the `Agent`
-  tool's `isolation: "worktree"` and hand back a patch
-  (`git add -N . && git diff HEAD --binary > "$(mktemp -d)/x.patch"` — `HEAD`
-  so a file the implementer staged but did not commit is still in the patch,
-  `--binary` so it round-trips, and a `mktemp -d` path so the patch lives
-  outside the worktree and never intent-adds itself) for the orchestrator to
-  apply and commit. A subagent inherits the session's worktree pin, so it
+  tool's `isolation: "worktree"` and hand back a patch, written with two
+  plain commands — `git add -N .`, then
+  `git diff HEAD --binary --output='<plan artifact folder>/<commit>.patch'`
+  (`HEAD` so a file the implementer staged but did not commit is still in the
+  patch, `--binary` so it round-trips, and an absolute path outside the
+  worktree so the patch never intent-adds itself). No `$(mktemp -d)`, `&&`,
+  or redirect: a worktree-isolated session refuses git inside a construct it
+  can't verify. The orchestrator applies and commits it. A subagent inherits the session's worktree pin, so it
   cannot `cd` or `git -C` into a worktree you made by hand — it will silently
   fall back to editing the shared tree alongside its sibling. An isolated
   worktree branches from `origin/<default-branch>` unless the harness is

@@ -39,7 +39,7 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    2. **Run it in the background** (`run_in_background: true`) — a whole-plan review can outlast one 10-minute foreground call. Use resolved absolute paths in single quotes (`~` does not expand inside quotes; write an embedded `'` as `'\''`).
 
       ```bash
-      cat -- '<brief path>' '<plan path>' | env OPENCODE_CONFIG_CONTENT='{"permission":{"bash":"deny","edit":"deny","webfetch":"deny","external_directory":"deny"}}' opencode run -m zai-coding-plan/glm-5.3 -- 'Follow the review brief on stdin; the full plan follows it.'
+      cat -- '<brief path>' '<plan path>' | OPENCODE_CONFIG_CONTENT='{"permission":{"bash":"deny","edit":"deny","webfetch":"deny","external_directory":"deny"}}' opencode run -m zai-coding-plan/glm-5.3 -- 'Follow the review brief on stdin; the full plan follows it.'
       ```
 
    **Why the policy:** The inline policy makes the seat read-only for real: opencode's default agent allows every tool, so a "reviewer" could otherwise edit the repo or run shell commands. Shell, edit, and web fetch are denied, and anything outside the repo is denied rather than asked about — in a non-interactive run an "ask" kills the run, while a denied tool is simply not offered to GLM. **Always use `--`** before the message so it is not taken as file paths, and pipe the plan on stdin rather than `-f` (opencode may reject external directory permissions).
