@@ -105,18 +105,35 @@ marks from the plan's work breakdown). If empty, derive it from the diff.
    in place of an inline diff past ~900 lines. You are notified when it exits;
    there is nothing to poll.
 
-   ```bash
-   runner=${CODEX_RUN:-$(find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins \
-     -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1)}
-   [ -f "$runner" ] || { echo "codex-run.py not found: install the codex-cli plugin (or set CODEX_RUN)"; exit 9; }
-   uv run --script "$runner" --model sol --changes-since HEAD --prompt-file "<prompt file you wrote>"
-   # astra: --model astra.  Batch-closing review: --changes-since <batch base commit>.
-   ```
+   Call it as **three plain shell commands**, never one compound command: a
+   session pinned to a worktree (a gauntlet run in its own) refuses compound
+   shell — variables, `$(…)`, `||` guards, heredocs — as too complex to
+   verify, and shell variables don't survive between tool calls anyway.
 
-   Shell variables don't survive between tool calls: resolve the runner once,
-   note its absolute path, and use that path in any later call (the
-   fallback's `--bundle-only` below included). It needs `uv`; `python3
-   "$runner"` works the same where `uv` is missing.
+   1. **Locate it.** `printenv CODEX_RUN` first (point it at a checkout's
+      `codex-run.py` to use changes that aren't installed yet); if that
+      prints nothing:
+
+      ```bash
+      find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1
+      ```
+
+      Note the absolute path and write it literally below (`<runner path>`).
+      Nothing printed means codex-cli isn't installed: take the fallback.
+   2. **Write the prompt** with the file-writing tool, to a file outside the
+      repo — the plan's artifact folder in a gauntlet, otherwise the
+      session's scratch directory. Not a heredoc: guards refuse them, and an
+      unquoted one expands backticks.
+   3. **Run it in the background** (`run_in_background: true`), with
+      single-quoted absolute paths:
+
+      ```bash
+      uv run --script '<runner path>' --model sol --changes-since HEAD --prompt-file '<prompt file>'
+      ```
+
+      Astra: `--model astra`. A batch-closing review: `--changes-since
+      <batch base commit>`. `python3 '<runner path>'` works the same where
+      `uv` is missing.
 
    Exit `0` prints the review. **Anything else is "no review", never "no
    findings"**: `3` failed, `4` empty, `5` stalled, `6` capped, `7` usage
@@ -126,7 +143,7 @@ marks from the plan's work breakdown). If empty, derive it from the diff.
    1. `cursor:cursor-rescue` with the same prompt, stated as a **read-only
       review — make no edits** (that is what switches it to Cursor's
       `--mode plan`; it has no `--read-only` flag), and the same changes:
-      `uv run --script "$runner" --changes-since <ref> --bundle-only` prints
+      `uv run --script '<runner path>' --changes-since <ref> --bundle-only` prints
       the exact bundle codex got, as a file path once it is big. It runs Grok
       4.7 through Cursor, and its foreground shell call is capped at 10
       minutes. Do not retry codex after a `7` — the retry hits the same quota.

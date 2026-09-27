@@ -30,7 +30,7 @@ names and the question-tool identity remain usable even when spawn is blocked.
   those harnesses without subagents. gx forbids nested spawns.
 - **Claude Code:** the shell-only parts still work — the codex runner (the
   gated-commit review and the astra panel seat) and `opencode run` (the GLM
-  seat, run directly instead of in its `Explore` wrapper). The CodeRabbit
+  seat). The CodeRabbit
   panel seat and the `cursor-rescue` review fallback are subagents: skip
   them and say so. Stop if the work needs implementers or simplify.
 - **Uncertain:** fail closed. Do not infer Claude Code from `codex` or
@@ -82,16 +82,29 @@ Cursor never gets an OpenAI model as a subagent: OpenAI models are leaving Curso
 
 ## Codex runner
 
-`scripts/codex-run.py` in the **codex-cli** plugin is the one way forge shells out to Codex (Claude Code, Cursor, and stock grok; gx too when its native GPT-6 seat is unavailable). It is read-only; caps sol at 20 minutes and astra at 25; checks every 10 minutes that Codex's output is still growing and kills a flat run early; kills the whole process tree on every exit path; and with `--changes-since <ref>` appends the change bundle itself (commits since `<ref>`, status, diff, untracked files — a diff *file* past ~900 lines). Install the codex-cli plugin on every harness forge runs on — even gx uses it, for `--bundle-only` and as the fallback route. Locate it:
+`scripts/codex-run.py` in the **codex-cli** plugin is the one way forge shells out to Codex (Claude Code, Cursor, and stock grok; gx too when its native GPT-6 seat is unavailable). It is read-only; caps sol at 20 minutes and astra at 25; checks every 10 minutes that Codex's output is still growing and kills a flat run early; kills the whole process tree on every exit path; and with `--changes-since <ref>` appends the change bundle itself (commits since `<ref>`, status, diff, untracked files — a diff *file* past ~900 lines). Install the codex-cli plugin on every harness forge runs on — even gx uses it, for `--bundle-only` and as the fallback route. 
 
-```bash
-runner=${CODEX_RUN:-$(find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins \
-  -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1)}
-[ -f "$runner" ] || { echo "codex-run.py not found: install the codex-cli plugin (or set CODEX_RUN)"; exit 9; }
-uv run --script "$runner" --model sol --changes-since HEAD --prompt-file "<prompt file>"
-```
+Call it as **three plain shell commands**, never one compound command. A session pinned to a worktree (every gauntlet run with its own) refuses compound shell — variables, `$(…)`, `||` guards, heredocs — as too complex to verify, and shell variables don't survive between tool calls anyway.
 
-Shell variables don't survive between tool calls, so resolve it once and use the absolute path in later calls. It needs `uv` (`python3 "$runner"` works the same without it). Launch it with the shell tool in the background (`run_in_background: true` or the harness equivalent) and wait for its exit. Exit `0` prints the review on stdout. `--changes-since <ref> --bundle-only` prints the same change bundle without running codex, for reviewers that aren't codex (native subagents, fallbacks, simplify); `<ref>` is `HEAD` for uncommitted changes. If codex-cli isn't installed, say so and build the bundle by hand from the repo root: `git log --oneline <ref>..HEAD`, `git status --short --untracked-files=all`, `git diff-index -p -M --textconv <ref>`, and the untracked files' contents — as a file once it passes ~900 lines. Anything else is "no review": `3` failed, `4` empty, `5` stalled, `6` capped, `7` usage limit / rate limit / capacity (never retry codex — same quota), `8` auth, `9` codex or the runner missing.
+1. **Locate it.** `printenv CODEX_RUN` first: point it at a checkout's `codex-run.py` to use changes that aren't installed yet (a branch before merge). If that prints nothing:
+
+   ```bash
+   find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1
+   ```
+
+   Note the absolute path it prints and write it literally in the later commands (`<runner path>`). Nothing printed means codex-cli isn't installed: say so and take the fallback.
+2. **Write the prompt** with the file-writing tool, to a file outside the repo — the plan's artifact folder in a gauntlet, otherwise the session's scratch directory. Not a heredoc: guards refuse them, and an unquoted one expands backticks.
+3. **Run it in the background** (`run_in_background: true` or the harness equivalent), with single-quoted absolute paths:
+
+   ```bash
+   uv run --script '<runner path>' --model sol --changes-since HEAD --prompt-file '<prompt file>'
+   ```
+
+   `--prompt-file` repeats and joins in order, so a plan-panel seat passes its brief and then the plan file itself. `python3 '<runner path>'` works the same where `uv` is missing.
+
+Exit `0` prints the review on stdout. Anything else is "no review": `3` failed, `4` empty, `5` stalled, `6` capped, `7` usage limit / rate limit / capacity (never retry codex — same quota), `8` auth, `9` codex missing.
+
+`--changes-since <ref> --bundle-only` prints the same change bundle without running codex, for reviewers that aren't codex (native subagents, fallbacks, simplify); `<ref>` is `HEAD` for uncommitted changes. If codex-cli isn't installed, say so and build the bundle by hand from the repo root with plain commands: `git log --oneline <ref>..HEAD`, `git status --short --untracked-files=all`, `git diff-index -p -M --textconv <ref>`, and the untracked files' contents — as a file once it passes ~900 lines.
 
 ## Codex-first review contract
 

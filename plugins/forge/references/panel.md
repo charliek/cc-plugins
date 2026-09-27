@@ -65,46 +65,23 @@ OpenRouter GPT ids are never a panel fallback. If the astra seat fails, report t
 
 Check `codex --version` and `opencode --version`. Warn and skip a missing CLI. If none of the three can run, stop.
 
-**Astra** (if `codex` is available) — through the codex runner (`harness.md` §Codex runner; `$runner` is its resolved absolute path), launched by the orchestrator itself as a background shell call, **not** inside a subagent: astra on a whole plan can outlast the 10-minute ceiling of a subagent's foreground shell call, and the runner supervises it (25-minute cap, killed early if flat for 10 minutes). Pipe the plan as **data**, never interpolate it into a quoted shell string; use a fresh random heredoc suffix.
+**Panel brief** — write it once with the file-writing tool, next to the plan (`<plan dir>/panel-brief.md`, outside the repo): the shared review questions above, ending "The plan follows." The astra and GLM seats both read it, followed by the plan file itself, so nothing in the plan is ever expanded by the shell. Every command here is plain — no variables, `$(…)`, or heredocs, which a session pinned to a worktree refuses. Use resolved absolute paths in single quotes (`~` does not expand inside quotes; write an embedded `'` as `'\''`).
+
+**Astra** (if `codex` is available) — the codex runner (`harness.md` §Codex runner; `<runner path>` from its step 1), launched by the orchestrator as a background shell call, **not** inside a subagent: astra on a whole plan can outlast the 10-minute ceiling of a subagent's foreground shell call, and the runner supervises it (25-minute cap, killed early if flat for 10 minutes).
 
 ```bash
-plan='<plan-file-path>'
-test -f "$plan" || exit 2
-{
-  cat <<'PANEL_9f3a2b1c'
-Review the following implementation plan. You may read repository files for context; do not edit anything. Evaluate standalone readability, acceptance criteria, test coverage, repo pattern alignment, and risks or missing edge cases. Provide specific, actionable feedback organized by category, citing file:line where the repo contradicts the plan.
----BEGIN PLAN---
-PANEL_9f3a2b1c
-  cat -- "$plan"
-  echo '---END PLAN---'
-} | uv run --script "$runner" --model astra
+uv run --script '<runner path>' --model astra --prompt-file '<brief path>' --prompt-file '<plan path>'
 ```
 
-A non-zero exit is a failed seat; report the runner's reason. Where `uv` is missing, `python3 "$runner" --model astra` is equivalent. Put the plan path in **single** quotes (write an embedded `'` as `'\''`): inside double quotes, a `$(…)` or backtick in the path would still run. Use the resolved absolute path — `~` does not expand inside quotes, so write `/home/you/…`, not `~/…`.
+A non-zero exit is a failed seat; report the runner's reason. `python3 '<runner path>'` works the same where `uv` is missing.
 
-**GLM** (if `opencode` is available) — pipe the plan via stdin; always use `--` before the message:
+**GLM** (if `opencode` is available) — also a background shell call from the orchestrator, not a subagent (whole-plan GLM reviews outlast a subagent's 10-minute shell call). The argument restricts its tools: in non-interactive mode, opencode kills the run as soon as GLM tries a shell command or reads outside the repo. Always use `--` before the message.
 
 ```bash
-set -o pipefail
-tmpdir=$(mktemp -d)
-trap 'rm -rf "$tmpdir"' EXIT
-plan='<plan-file-path>'
-test -f "$plan" || exit 1
-cat -- "$plan" | opencode run \
-  -m "zai-coding-plan/glm-5.3" \
-  -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone? 2) Are acceptance criteria clear? 3) Does it include test coverage? 4) Does it match repo conventions? Provide specific, actionable feedback." \
-  > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"
-if [ $? -ne 0 ] || [ ! -s "$tmpdir/output.txt" ]; then
-  cat "$tmpdir/stderr.txt"
-  exit 1
-fi
-cat "$tmpdir/output.txt"
+cat -- '<brief path>' '<plan path>' | opencode run -m zai-coding-plan/glm-5.3 -- 'Follow the review brief on stdin; the full plan follows it. Use ONLY your read, grep and glob tools, and ONLY on files inside the current repository directory. Do not run shell commands.'
 ```
 
-Launch GLM as its own sonnet-class (`model: sonnet`) **`Explore`** subagent
-(`run_in_background: true`) that returns only the review text. `Explore` is
-read-only; do not use writable `general-purpose` for panel seats. The wrapper
-may run `opencode` (stdin review) but must not edit the workspace.
+Stop it with the task-stop tool if it is still running at 20 minutes. A stopped run, a non-zero exit, or empty output is a failed seat.
 
 **CodeRabbit:** spawn `subagent_type: "coderabbit:code-reviewer"` with
 `run_in_background: true`, `model: sonnet` if the spawn tool accepts it

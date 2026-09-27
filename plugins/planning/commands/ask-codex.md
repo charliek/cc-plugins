@@ -31,25 +31,26 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    - [ ] **No conversation dependencies**: Fully understandable without prior chat context
    - [ ] **Repo conventions**: Matches the repo's existing patterns (naming, structure, tooling)
 
-4. **Submit the plan to Codex for review**: run the plan through the codex-cli plugin's supervised runner, `scripts/codex-run.py`, on `gpt-6-astra` (OpenAI's frontier model — plan review is where its depth pays off). Astra is slow on a big plan, so the runner gives it a 25-minute cap and checks every 10 minutes that it is still making progress; that is longer than one foreground shell call allows, so launch it with `run_in_background: true` and you will be told when it exits. Pipe the plan in as data — never expand it into a quoted shell argument, where `$`, backticks, and quotes in the plan get interpreted.
+4. **Submit the plan to Codex for review**: run it through the codex-cli plugin's supervised runner, `scripts/codex-run.py`, on `gpt-6-astra` (OpenAI's frontier model — plan review is where its depth pays off). Astra is slow on a big plan, so the runner gives it a 25-minute cap and checks every 10 minutes that it is still making progress — longer than one foreground shell call allows, so run it in the background and you will be told when it exits. Use three plain commands, not one compound command: a session pinned to a worktree refuses variables, `$(…)`, `||` guards, and heredocs as too complex to verify.
 
-```bash
-runner=${CODEX_RUN:-$(find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins \
-  -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1)}
-[ -f "$runner" ] || { echo "codex-run.py not found: install the codex-cli plugin (or set CODEX_RUN)"; exit 9; }
-plan='<plan-file-path>'
-test -f "$plan" || { echo "plan not found"; exit 2; }
-{
-  cat <<'PLAN_REVIEW_9f3a2b1c'
-Review the following implementation plan. You may read repository files for context; do not edit anything. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? 5) Risks, gaps, or missing edge cases? Provide specific, actionable feedback organized by category, citing file:line where the repo contradicts the plan.
----BEGIN PLAN---
-PLAN_REVIEW_9f3a2b1c
-  cat -- "$plan"
-  echo '---END PLAN---'
-} | uv run --script "$runner" --model astra
-```
+   1. **Locate the runner.** `printenv CODEX_RUN` first (a checkout's `codex-run.py`, for changes not installed yet); if that prints nothing:
 
-   Put the plan path in **single** quotes (write an embedded `'` as `'\''`): inside double quotes, a `$(…)` or backtick in the path would still run. Use the resolved absolute path — `~` does not expand inside quotes, so write `/home/you/…`, not `~/…`. Use a fresh random suffix on the heredoc delimiter each time. The runner prints the review on stdout. Any non-zero exit means **no review** (the runner says why: stalled, capped, empty, usage-limited, auth) — report it; never treat it as "no findings". If a big plan stalls, retry once with a narrower brief (for example only the design and work-breakdown sections) rather than a longer cap.
+      ```bash
+      find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1
+      ```
+
+      Note the absolute path it prints (`<runner path>` below). Nothing printed means the codex-cli plugin isn't installed: say so and stop.
+   2. **Write the review brief** with the file-writing tool, next to the plan (`<plan dir>/codex-brief.md`, outside the repo):
+
+      > Review the implementation plan that follows this brief. You may read repository files for context; do not edit anything. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? 5) Risks, gaps, or missing edge cases? Provide specific, actionable feedback organized by category, citing file:line where the repo contradicts the plan.
+
+   3. **Run it in the background** (`run_in_background: true`). The brief and the plan go in as files, never expanded into the command, so nothing in the plan is interpreted by the shell. Use resolved absolute paths in single quotes (`~` does not expand inside quotes; write an embedded `'` as `'\''`).
+
+      ```bash
+      uv run --script '<runner path>' --model astra --prompt-file '<brief path>' --prompt-file '<plan path>'
+      ```
+
+   The runner prints the review on stdout. Any non-zero exit means **no review** (the runner says why: stalled, capped, empty, usage-limited, auth) — report it; never treat it as "no findings". If a big plan stalls, retry once on an excerpt (the design and work-breakdown sections, written to their own file) rather than with a longer cap.
 
 5. **Evaluate findings**: Analyze each piece of feedback from Codex
    - **Fix**: missing acceptance criteria, unclear exit conditions, incomplete test coverage, architectural misalignment, standalone readability issues, missing edge cases

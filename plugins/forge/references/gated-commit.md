@@ -41,16 +41,16 @@ A batch that stalls or hits the cap is too big for one pass: split it into two n
 - a fixed per-item verdict format: `no issue — why, file:line`, or a finding with `file:line` plus the concrete failure scenario; plus the list of files + line ranges the reviewer actually read
 - review-only: do not edit anything
 
-**Changes** — every route reviews the same bundle: commits since the scope's base, status, the diff against it, and untracked file contents. The codex runner builds it itself with `--changes-since <base>` (`HEAD` for one uncommitted unit, the batch's base commit for a batch). For any other reviewer, produce the identical text with `uv run --script "$runner" --changes-since <base> --bundle-only` and paste it inline — gx `explore` has no shell. (`$runner` is the absolute path resolved per `harness.md` §Codex runner, which also gives the plain-git fallback when codex-cli is not installed.) Past ~900 lines or ~100 KB the bundle is a file path plus instructions to read only what is needed; a reviewer left to discover a big diff itself dumps tens of thousands of lines and reaches the cap with no verdict.
+**Changes** — every route reviews the same bundle: commits since the scope's base, status, the diff against it, and untracked file contents. The codex runner builds it itself with `--changes-since <base>` (`HEAD` for one uncommitted unit, the batch's base commit for a batch). For any other reviewer, produce the identical text with `uv run --script '<runner path>' --changes-since <base> --bundle-only` and paste it inline — gx `explore` has no shell. (`<runner path>` is the absolute path from `harness.md` §Codex runner, step 1; that section also gives the plain-git fallback when codex-cli is not installed.) Past ~900 lines or ~100 KB the bundle is a file path plus instructions to read only what is needed; a reviewer left to discover a big diff itself dumps tens of thousands of lines and reaches the cap with no verdict.
 
 Skip this review entirely for docs-only diffs and record `review: skipped (docs-only)` in the commit message — there is no correctness surface to find, and that line is the commit's coverage.
 
 ### Claude Code, Cursor, and stock grok — the codex runner
 
-Write the prompt to a file, then launch the runner (`harness.md` §Codex runner) from the orchestrator's shell **in the background** and wait for its exit:
+Follow `harness.md` §Codex runner — three plain commands: locate the runner, write the prompt with the file-writing tool, then launch it from the orchestrator's shell **in the background** and wait for its exit:
 
 ```bash
-uv run --script "$runner" --model sol --changes-since HEAD --prompt-file "<prompt file>"
+uv run --script '<runner path>' --model sol --changes-since HEAD --prompt-file '<prompt file>'
 # astra: --model astra.  Batch-closing review: --changes-since <batch base commit>.
 ```
 

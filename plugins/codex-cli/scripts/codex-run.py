@@ -21,7 +21,7 @@ two things a shell recipe does badly are done once, here:
 
 Usage:
     codex-run.py [--model sol|astra|luna|<id>] [--effort LEVEL]
-                 [--prompt-file PATH]            # else the prompt is read from stdin
+                 [--prompt-file PATH ...]        # repeatable, joined in order; else stdin
                  [--changes-since REF]           # append the diff since REF (HEAD = uncommitted only)
                  [--cap-min N] [--stall-min N] [--out PATH] [--keep]
     codex-run.py --changes-since REF --bundle-only   # print the bundle for another reviewer; no codex run
@@ -189,8 +189,10 @@ def build_changes(base: str, run_dir: Path) -> str:
 
 
 def read_prompt(args: argparse.Namespace) -> str:
+    # Several files join in order, so a panel seat can pass a short brief and
+    # then the plan file itself, with no shell plumbing to combine them.
     if args.prompt_file:
-        return Path(args.prompt_file).read_text()  # OSError -> usage error in main
+        return "\n\n".join(Path(f).read_text() for f in args.prompt_file)  # OSError -> usage error
     if sys.stdin.isatty():
         return ""
     return sys.stdin.read()
@@ -337,7 +339,7 @@ def parse_args(argv: list) -> argparse.Namespace:
     )
     parser.add_argument("--model", default="sol", help="sol, astra, luna, or a full model id (default: sol)")
     parser.add_argument("--effort", default="high", choices=EFFORTS, help="reasoning effort (default: high)")
-    parser.add_argument("--prompt-file", help="prompt text; read from stdin when omitted")
+    parser.add_argument("--prompt-file", action="append", help="prompt text; repeatable, joined in order; stdin when omitted")
     parser.add_argument("--changes-since", metavar="REF", help="append the changes since REF (HEAD = uncommitted only)")
     parser.add_argument("--cap-min", type=float, help="hard cap in minutes (default: 25 for astra, 20 otherwise)")
     parser.add_argument("--stall-min", type=float, default=DEFAULT_STALL_MINUTES, help="kill after this many minutes without new output (default: 10)")

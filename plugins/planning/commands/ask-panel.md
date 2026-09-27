@@ -41,51 +41,37 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 
    Read the plan file content so it can be included in agent prompts.
 
-   **Launch all reviewers concurrently** in a single message, each with `run_in_background: true`: the Codex seat as its own `Bash` call, GLM and CodeRabbit as `Agent` calls. If a CLI tool was unavailable (detected in step 1), skip that seat.
+   **Launch all reviewers concurrently** in a single message, each with `run_in_background: true`: the Codex and GLM seats as their own `Bash` calls, CodeRabbit as an `Agent` call. If a CLI tool was unavailable (detected in step 1), skip that seat.
 
    **Do NOT combine multiple reviewers into a single Agent or Bash call.** Combining CLI tools into one shell command causes bash operator precedence bugs that silently break variable scoping.
 
-   **Codex reviewer** (if codex CLI is available): run it yourself as a background `Bash` call — not inside an Agent. Astra on a whole plan can take well over 10 minutes, and a subagent's single foreground shell call is capped at 10; the runner (`scripts/codex-run.py` in the `codex-cli` plugin) supervises it instead: 25-minute cap, killed early if its output has been flat for 10 minutes, and a distinct exit code for every way it can fail.
+   **Shared brief.** First write the review brief once with the file-writing tool, next to the plan (`<plan dir>/panel-brief.md`, outside the repo); the Codex and GLM seats both read it, then the plan file itself, so nothing in the plan is ever expanded by the shell:
 
-```bash
-runner=${CODEX_RUN:-$(find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins \
-  -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1)}
-[ -f "$runner" ] || { echo "codex-run.py not found: install the codex-cli plugin (or set CODEX_RUN)"; exit 9; }
-plan='<plan-file-path>'
-test -f "$plan" || { echo "plan not found"; exit 2; }
-{
-  cat <<'PLAN_REVIEW_9f3a2b1c'
-Review the following implementation plan. You may read repository files for context; do not edit anything. Evaluate standalone readability, acceptance criteria, test coverage, repo pattern alignment, and risks or missing edge cases. Provide specific, actionable feedback organized by category, citing file:line where the repo contradicts the plan.
----BEGIN PLAN---
-PLAN_REVIEW_9f3a2b1c
-  cat -- "$plan"
-  echo '---END PLAN---'
-} | uv run --script "$runner" --model astra
-```
+   > Review the implementation plan that follows this brief. You may read repository files for context; do not edit anything. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? 5) Risks, gaps, or missing edge cases? Provide specific, actionable feedback organized by category, citing file:line where the repo contradicts the plan.
 
-   Put the plan path in **single** quotes (write an embedded `'` as `'\''`): inside double quotes, a `$(…)` or backtick in the path would still run. Use the resolved absolute path — `~` does not expand inside quotes, so write `/home/you/…`, not `~/…`. Use a fresh random heredoc suffix each time. A non-zero exit is a failed seat — report the runner's reason, never "no findings". If it stalls on a big plan, one retry with a narrower brief (design and work-breakdown sections only) beats a longer cap.
+   Every seat command below is plain — no variables, `$(…)`, `||` guards, or heredocs, which a session pinned to a worktree refuses as too complex to verify. Use resolved absolute paths in single quotes (`~` does not expand inside quotes; write an embedded `'` as `'\''`).
 
-   **GLM reviewer** (if opencode CLI is available):
-   Use the Agent tool with `subagent_type: "general-purpose"` and `run_in_background: true`.
-   Prompt the agent to run the GLM review and return only the review text:
+   **Codex reviewer** (if codex CLI is available): run it yourself as a background `Bash` call — not inside an Agent. Astra on a whole plan can take well over 10 minutes, and a subagent's single foreground shell call is capped at 10; the runner (`scripts/codex-run.py` in the `codex-cli` plugin) supervises it instead: 25-minute cap, killed early if its output has been flat for 10 minutes, and a distinct exit code for every way it can fail. Locate it first — `printenv CODEX_RUN` (a checkout's copy, for changes not installed yet), else:
 
-   > You are a plan reviewer. Run the following Bash command to get a GLM 5.3 review of an implementation plan, then return ONLY the review text (no commentary or wrapper).
-   >
-   > Run as a single Bash command:
-   > ```bash
-   > tmpdir=$(mktemp -d)
-   > trap 'rm -rf "$tmpdir"' EXIT
-   > plan='<plan-file-path>'
-   > cat -- "$plan" | opencode run \
-   >   -m "zai-coding-plan/glm-5.3" \
-   >   -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone? 2) Are acceptance criteria clear? 3) Does it include test coverage? 4) Does it match repo conventions? Provide specific, actionable feedback." \
-   >   > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"
-   > if [ $? -ne 0 ] || [ ! -s "$tmpdir/output.txt" ]; then
-   >   cat "$tmpdir/stderr.txt"
-   >   exit 1
-   > fi
-   > cat "$tmpdir/output.txt"
-   > ```
+   ```bash
+   find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1
+   ```
+
+   Nothing printed means the codex-cli plugin isn't installed: skip the seat and say so. Otherwise, with that path:
+
+   ```bash
+   uv run --script '<runner path>' --model astra --prompt-file '<brief path>' --prompt-file '<plan path>'
+   ```
+
+   A non-zero exit is a failed seat — report the runner's reason, never "no findings". If it stalls on a big plan, one retry on an excerpt (design and work-breakdown sections, in their own file) beats a longer cap.
+
+   **GLM reviewer** (if opencode CLI is available): also a background `Bash` call from you, not an Agent — whole-plan GLM reviews outlast a subagent's 10-minute shell call. The argument restricts its tools: in non-interactive mode, opencode kills the run as soon as GLM tries a shell command or reads outside the repo. Always use `--` before the message.
+
+   ```bash
+   cat -- '<brief path>' '<plan path>' | opencode run -m zai-coding-plan/glm-5.3 -- 'Follow the review brief on stdin; the full plan follows it. Use ONLY your read, grep and glob tools, and ONLY on files inside the current repository directory. Do not run shell commands.'
+   ```
+
+   Stop it with the task-stop tool if it is still running at 20 minutes. A stopped run, a non-zero exit, or empty output is a failed seat.
 
    **CodeRabbit reviewer**:
    Use the Agent tool with `subagent_type: "coderabbit:code-reviewer"` and `run_in_background: true`.

@@ -36,7 +36,7 @@ Tell the reviewers which decisions are pinned spec (from the plan or `$ARGUMENTS
 
 ## 3. Material to send
 
-Use the same change bundle the review gets: `uv run --script "$runner" --changes-since <base> --bundle-only` (`harness.md` §Codex runner; `<base>` is `HEAD` for uncommitted changes, the merge-base with the default branch for a whole-branch pass) prints commits since `<base>`, status, the diff, and untracked file contents — or, once it is big, a file path to read. gx `explore` cannot run `git`, so paste it inline. For an explicit non-diff scope (paths, symbols), send those instead.
+Use the same change bundle the review gets: `uv run --script '<runner path>' --changes-since <base> --bundle-only` (`harness.md` §Codex runner; `<base>` is `HEAD` for uncommitted changes, the merge-base with the default branch for a whole-branch pass) prints commits since `<base>`, status, the diff, and untracked file contents — or, once it is big, a file path to read. gx `explore` cannot run `git`, so paste it inline. For an explicit non-diff scope (paths, symbols), send those instead.
 
 ## 4. Three parallel reviewers
 

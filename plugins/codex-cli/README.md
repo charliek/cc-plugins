@@ -40,19 +40,27 @@ The engine for **scripted** Codex calls — the gated-commit and branch reviews 
 
 It always runs read-only, reads the prompt from `--prompt-file` (or stdin), and with `--changes-since <ref>` appends the change bundle itself — commits since `<ref>`, `git status`, `git diff <ref>`, and untracked file contents — without touching the index. `HEAD` means "uncommitted only"; a batch's base commit covers several commits at once. Past ~900 lines it writes the bundle to a file and tells Codex to read only what it needs, instead of inlining it.
 
-```bash
-uv run --script "$runner" --model sol --changes-since HEAD --prompt-file review-prompt.txt   # run_in_background: true
-```
+Standard-library Python 3.9+; invoke it with `uv run --script` (no dependence on the file's executable bit surviving a plugin install).
 
-Standard-library Python 3.9+. Invoke it as `uv run --script "$runner"` (no dependence on the file's executable bit surviving a plugin install); `python3 "$runner"` works too. Callers outside this plugin locate it with:
+Call it as **three plain shell commands**, never one compound command. A session pinned to a worktree (every gauntlet run with its own) refuses compound shell — variables, `$(…)`, `||` guards, heredocs — as too complex to verify, and shell variables don't survive between tool calls anyway.
 
-```bash
-runner=${CODEX_RUN:-$(find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins \
-  -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1)}
-[ -f "$runner" ] || { echo "codex-run.py not found: install the codex-cli plugin (or set CODEX_RUN)"; exit 9; }
-```
+1. **Locate it.** `printenv CODEX_RUN` first: point it at a checkout's `codex-run.py` to use changes that aren't installed yet (a branch before merge). If that prints nothing:
 
-Set `CODEX_RUN` to a checkout's copy to test changes before they're installed. Tests: `python3 -m unittest discover -s plugins/codex-cli/scripts/tests -v`.
+   ```bash
+   find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1
+   ```
+
+   Note the absolute path it prints and write it literally in the later commands (`<runner path>`). Nothing printed means codex-cli isn't installed: say so and take the fallback.
+2. **Write the prompt** with the file-writing tool, to a file outside the repo — the plan's artifact folder in a gauntlet, otherwise the session's scratch directory. Not a heredoc: guards refuse them, and an unquoted one expands backticks.
+3. **Run it in the background** (`run_in_background: true` or the harness equivalent), with single-quoted absolute paths:
+
+   ```bash
+   uv run --script '<runner path>' --model sol --changes-since HEAD --prompt-file '<prompt file>'
+   ```
+
+   `--prompt-file` repeats and joins in order, so a plan-panel seat passes its brief and then the plan file itself. `python3 '<runner path>'` works the same where `uv` is missing.
+
+Tests: `python3 -m unittest discover -s plugins/codex-cli/scripts/tests -v`.
 
 ## Knowledge baked in (learned the hard way)
 

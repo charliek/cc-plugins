@@ -109,6 +109,14 @@ class InvocationTests(RunnerCase):
         self.assertEqual(self.recorded()["prompt"], "From a file.")
         self.assertIn("looks right", out.read_text())
 
+    def test_prompt_files_join_in_order(self):
+        brief, plan = self.tmp / "brief.md", self.tmp / "plan.md"
+        brief.write_text("Review the plan that follows.\n")
+        plan.write_text("# Plan\nDo the thing.\n")
+        result = self.run_runner("ok", "--prompt-file", str(brief), "--prompt-file", str(plan), prompt="")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.recorded()["prompt"], "Review the plan that follows.\n\n\n# Plan\nDo the thing.\n")
+
     def test_usage_errors(self):
         for args in (
             ["--model", "sol; rm -rf /"],
