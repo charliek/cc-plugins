@@ -28,7 +28,9 @@ marks from the plan's work breakdown). If empty, derive it from the diff.
    the whole local gate missed.
 
 2. **Run the gate.** All gate commands must pass before anything else. Fix
-   failures in the diff's own code; do not weaken tests to pass them.
+   failures in the diff's own code; do not weaken tests to pass them. Run
+   each gate command unpiped: `make test | tail` reports `tail`'s exit code,
+   not the tests'.
 
    **Test-bearing diffs**: rebuild before running — a stale binary passes
    vacuously — and give every new or converted functional test a negative

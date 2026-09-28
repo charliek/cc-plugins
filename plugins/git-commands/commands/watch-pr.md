@@ -57,7 +57,7 @@ Use `$ARGUMENTS` as an optional PR number. If not provided, use the PR associate
    - Verify a suggested fix against the change's own pinned decisions before applying it — a reviewer will happily "fix" a deliberate choice back to the default
    - Reply on the thread with `gh api --method POST repos/{owner}/{repo}/pulls/<pr>/comments/<id>/replies -f body=…` so the disposition lands where the finding is. `<id>` must be the thread's **root** comment: if the comment you are answering has an `in_reply_to_id`, post to that id instead of its own — GitHub rejects a reply to a reply
    - Skip nitpicks, style-only suggestions, and comments that don't improve the code
-   - Editing the PR body (`gh pr edit --body-file`) overwrites CodeRabbit's appended summary — harmless, it re-adds it on the next review, but don't mistake it for the bot retracting anything
+   - Edit a PR body with `gh api -X PATCH repos/{owner}/{repo}/pulls/<pr> -F body=@<file>`, and check it changed: `gh pr edit --body-file` can fail on a repo with classic-Projects metadata (a `projectCards` deprecation error) and leave the body unchanged. Editing the body overwrites CodeRabbit's appended summary — harmless, it re-adds it on the next review, but don't mistake it for the bot retracting anything
    - If changes were made, commit, push, and go back to step 2 to re-watch
    - If no changes were needed, move to step 7
 

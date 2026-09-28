@@ -158,8 +158,20 @@ stale ref) fails or mis-bases it: `gh repo view --json defaultBranchRef -q
 `git fetch origin`, then `git rev-parse --verify --quiet origin/<default>`.
 
 Every implementer brief says **"run the gate synchronously, in the
-foreground"** — subagents that background a long gate report success before
-it finishes.
+foreground"** — subagents that background a long gate report success before it
+finishes — and to **never pipe a gate command** (no `tail`, `grep`, or `head`:
+a pipe reports the filter's exit code, not the gate's), and report each
+target's exit code.
+
+**A flake in code another active session owns** (a gate or CI failure outside
+this plan's scope): diagnose it read-only — a CPU-starvation repro such as
+`systemd-run --user --scope -p CPUQuota=5% <test command>` separates starvation
+from a real ordering bug — then send the owning session the evidence and two
+options: they fix it, or you fix it and they review the diff before you
+commit. Don't edit another session's code unasked. If you fix it, the
+implementer brief asks for evidence that tells starvation from an ordering
+bug: timing clusters, a state dump at the watchdog, and a forced-delay repro
+that fails deterministically.
 
 Then run the gated-commit procedure inline with the unit's `simplify` and
 `review` marks. Batched units land with `review: pending` and are covered by
@@ -196,6 +208,13 @@ Per repo that changed:
    workstream, verification summary, dependency/privacy/secret impact,
    accepted risks — and the plan in a collapsible `<details>` block.
    Cross-link sibling PRs.
+   GitHub caps a PR body at 65,536 characters, and a panel-hardened plan can
+   exceed it: then excerpt what a reviewer needs (problem, acceptance
+   criteria, amendments, § Verified) and say where the full plan lives. To
+   change the body later, use
+   `gh api -X PATCH repos/<owner>/<repo>/pulls/<n> -F body=@<file>` —
+   `gh pr edit --body-file` can fail on a repo with classic-Projects metadata
+   and leave the body unchanged — and check that the body actually changed.
 2. Watch CI until green. If `git-commands` is installed, **read** that
    plugin's `watch-pr` command file and execute its steps inline (do not
    emit `/watch-pr`). If it is missing, `gh pr checks --watch --fail-fast`

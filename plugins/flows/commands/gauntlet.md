@@ -182,7 +182,18 @@ If the brief says to run straight through, record the merge policy it gives
   added along the way.
 - Every implementer brief says **"run the gate synchronously, in the
   foreground"** — subagents that background a long gate report success before
-  it has finished.
+  it has finished — and to **never pipe a gate command** (no `tail`, `grep`,
+  or `head`: a pipe reports the filter's exit code, not the gate's), and
+  report each target's exit code.
+- **A flake in code another active session owns** (a gate or CI failure
+  outside this plan's scope): diagnose it read-only — a CPU-starvation repro
+  such as `systemd-run --user --scope -p CPUQuota=5% <test command>` separates
+  starvation from a real ordering bug — then send the owning session the
+  evidence and two options: they fix it, or you fix it and they review the
+  diff before you commit. Don't edit another session's code unasked. If you
+  fix it, the implementer brief asks for evidence that tells starvation from
+  an ordering bug: timing clusters, a state dump at the watchdog, and a
+  forced-delay repro that fails deterministically.
 - **Never two implementers in one tree.** Sequential implementers edit the
   branch tree directly (no isolation). Parallel ones each need the `Agent`
   tool's `isolation: "worktree"` and hand back a patch, written with two
@@ -237,6 +248,13 @@ Per repo that changed:
    privacy/secret impact, any accepted risks the plan dispositioned — and
    the relevant plan text in a collapsible `<details>` block at the bottom.
    Cross-link the sibling PRs when the plan spans repos.
+   GitHub caps a PR body at 65,536 characters, and a panel-hardened plan can
+   exceed it: then excerpt what a reviewer needs (problem, acceptance
+   criteria, amendments, § Verified) and say where the full plan lives. To
+   change the body later, use
+   `gh api -X PATCH repos/<owner>/<repo>/pulls/<n> -F body=@<file>` —
+   `gh pr edit --body-file` can fail on a repo with classic-Projects metadata
+   and leave the body unchanged — and check that the body actually changed.
 2. Run `/git-commands:watch-pr` until CI is green. If the `git-commands`
    plugin isn't installed, watch CI directly (`gh pr checks`) and say so.
 3. Bot reviews: **verify the bot actually reviewed** (a rate-limited
