@@ -330,6 +330,23 @@ class ChangesTests(RunnerCase):
             self.assertIn(marker, "\n".join(lines[start - 1:end]), name)
         self.assertIn("read that file in slices".lower(), prompt.lower())
 
+    def test_index_ignores_header_lookalikes_inside_files(self):
+        # An untracked file whose own lines look like bundle headers.
+        tricky = "".join(f"row_{i} = {i}\n" for i in range(600))
+        tricky += "===== not_a_file.py =====\ndiff --git a/fake b/fake\n"
+        tricky += "".join(f"tail_{i} = {i}\n" for i in range(600))
+        (self.repo / "tricky.md").write_text(tricky)
+        result = self.run_runner("ok", "--changes-since", "HEAD", "--keep", cwd=self.repo)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        prompt = self.recorded()["prompt"]
+        self.assertNotIn("not_a_file.py:", prompt)
+        self.assertNotIn("fake:", prompt)
+        lines = (self.run_dir(result.stderr) / "changes.diff").read_text().split("\n")
+        start, end = map(int, re.search(r"  tricky.md: lines (\d+)-(\d+)", prompt).groups())
+        section = "\n".join(lines[start - 1:end])
+        self.assertIn("row_0 = 0", section)
+        self.assertIn("tail_599 = 599", section)
+
     def test_runs_from_a_subdirectory(self):
         (self.repo / "sub").mkdir()
         (self.repo / "sub" / "keep.txt").write_text("tracked\n")

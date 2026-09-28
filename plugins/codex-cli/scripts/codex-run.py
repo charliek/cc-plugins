@@ -140,25 +140,44 @@ def build_changes(base: str, run_dir: Path) -> str:
         return git(*args, cwd=top)
 
     g("rev-parse", "--verify", "--quiet", f"{base}^{{commit}}")
-    parts = []
+
+    # Built line by line so each file's range is recorded as it is appended.
+    # Parsing headers back out afterwards would mistake an untracked file's
+    # own `diff --git` or `===== x =====` lines for boundaries.
+    out: list = []
+    ranges: list = []  # (name, first line, last line), 1-based
+
+    def add(text: str) -> None:
+        out.extend(text.rstrip("\n").split("\n"))
+
     log = g("log", "--oneline", f"{base}..HEAD")
     if log.strip():
-        parts.append(f"--- commits since {base} ---\n{log}")
-    parts.append("--- changed files ---\n" + g("status", "--short", "--untracked-files=all"))
+        add(f"--- commits since {base} ---\n{log}")
+        out.append("")
+    add("--- changed files ---\n" + g("status", "--short", "--untracked-files=all"))
+    out.append("")
     # Plumbing, not `git diff`: the porcelain refreshes stat info and rewrites
     # the index even with optional locks off. Plumbing skips textconv filters
     # unless asked, so ask.
-    parts.append(
-        f"--- diff against {base} (committed + staged + unstaged) ---\n"
-        + g("diff-index", "-p", "-M", "--textconv", base)
-    )
+    add(f"--- diff against {base} (committed + staged + unstaged) ---")
+    current = None
+    for line in g("diff-index", "-p", "-M", "--textconv", base).rstrip("\n").split("\n"):
+        # In a patch, content lines carry a +/-/space prefix, so an unprefixed
+        # `diff --git` line is always a real file header.
+        if line.startswith("diff --git "):
+            if current:
+                ranges.append((current[0], current[1], len(out)))
+            current = (line.rsplit(" b/", 1)[-1], len(out) + 1)
+        out.append(line)
+    if current:
+        ranges.append((current[0], current[1], len(out)))
 
     untracked = [p for p in g("ls-files", "--others", "--exclude-standard", "-z").split("\0") if p]
     blocks = []
     for name in untracked:
         path = top / name
         if path.is_symlink():
-            blocks.append(f"===== {name} (symlink -> {os.readlink(path)}) =====")
+            blocks.append((name, f"===== {name} (symlink -> {os.readlink(path)}) ====="))
             continue
         if not path.is_file():
             continue
@@ -166,18 +185,21 @@ def build_changes(base: str, run_dir: Path) -> str:
         if size > UNTRACKED_MAX_BYTES or not is_text(path):
             # Say so in a way any reviewer acts on: a big new source file must
             # still be read, just not inlined.
-            blocks.append(
-                f"===== {name} (not inlined: {size} bytes or binary; "
-                "read it from the worktree before giving a verdict) ====="
-            )
+            blocks.append((name, f"===== {name} (not inlined: {size} bytes or binary; "
+                                 "read it from the worktree before giving a verdict) ====="))
             continue
-        blocks.append(f"===== {name} =====\n{path.read_text(errors='replace')}")
+        blocks.append((name, f"===== {name} =====\n{path.read_text(errors='replace')}"))
     if blocks:
-        parts.append("--- untracked file contents ---\n" + "\n".join(blocks))
+        out.append("")
+        add("--- untracked file contents ---")
+        for name, block in blocks:
+            first = len(out) + 1
+            add(block)
+            ranges.append((name, first, len(out)))
 
-    changes = "\n\n".join(parts)
-    if changes.count("\n") <= INLINE_MAX_LINES and len(changes.encode()) <= INLINE_MAX_BYTES:
-        return f"\n\n=== BEGIN CHANGES ===\n{changes}\n=== END CHANGES ===\n"
+    changes = "\n".join(out) + "\n"
+    if len(out) <= INLINE_MAX_LINES and len(changes.encode()) <= INLINE_MAX_BYTES:
+        return f"\n\n=== BEGIN CHANGES ===\n{changes}=== END CHANGES ===\n"
 
     diff_file = run_dir / "changes.diff"
     diff_file.write_text(changes)
@@ -187,35 +209,20 @@ def build_changes(base: str, run_dir: Path) -> str:
         f"range (for example `sed -n '120,480p' {diff_file}`): a whole-file read comes back "
         "truncated. The index below gives each changed file's lines in it. Beyond that, read "
         "only the specific files, symbols, or line ranges you need, and list what you read in "
-        "your report.\n" + index_of(changes)
+        "your report.\n" + index_text(ranges)
     )
 
 
-def index_of(changes: str) -> str:
-    """Line ranges of each file's section in the changes file.
+def index_text(ranges: list) -> str:
+    """Render the per-file line ranges of a large bundle.
 
     Long tool reads get truncated, so a reviewer has to read a big bundle in
     slices; the index tells it which slice holds which file.
     """
-    lines = changes.split("\n")
-    starts = []  # (line number, name or None for a section header)
-    for number, line in enumerate(lines, 1):
-        if line.startswith("diff --git "):
-            starts.append((number, line.rsplit(" b/", 1)[-1]))
-        elif line.startswith("===== ") and line.endswith(" ====="):
-            starts.append((number, line[6:-6].split(" (")[0]))
-        elif line.startswith("--- ") and line.endswith(" ---"):
-            starts.append((number, None))
-    entries = []
-    for i, (start, name) in enumerate(starts):
-        if name is None:
-            continue
-        end = starts[i + 1][0] - 1 if i + 1 < len(starts) else len(lines)
-        entries.append(f"  {name}: lines {start}-{end}")
-    if not entries:
+    if not ranges:
         return ""
-    shown = entries[:INDEX_MAX_ENTRIES]
-    more = len(entries) - len(shown)
+    shown = [f"  {name}: lines {first}-{last}" for name, first, last in ranges[:INDEX_MAX_ENTRIES]]
+    more = len(ranges) - len(shown)
     tail = f"  … and {more} more files; search the file for `diff --git` or `=====` headers\n" if more else ""
     return "Index:\n" + "\n".join(shown) + "\n" + tail
 

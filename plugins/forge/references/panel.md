@@ -75,10 +75,10 @@ uv run --script '<runner path>' --model astra --prompt-file '<brief path>' --pro
 
 A non-zero exit is a failed seat; report the runner's reason. `python3 '<runner path>'` works the same where `uv` is missing.
 
-**GLM** (if `opencode` is available) — also a background shell call from the orchestrator, not a subagent (whole-plan GLM reviews outlast a subagent's 10-minute shell call). The inline policy makes the seat read-only for real: opencode's default agent allows every tool, so a "reviewer" could otherwise edit the repo or run shell commands. Shell, edit, and web fetch are denied, and anything outside the repo is denied rather than asked about — in a non-interactive run an "ask" kills the run, while a denied tool is simply not offered to GLM. Always use `--` before the message.
+**GLM** (if `opencode` is available) — also a background shell call from the orchestrator, not a subagent (whole-plan GLM reviews outlast a subagent's 10-minute shell call). The inline policy makes the seat read-only for real: opencode's default agent allows every tool, so a "reviewer" could otherwise edit the repo or run shell commands. Shell, edit, subagents (`task`), and web fetch are denied, and anything outside the repo is denied rather than asked about — in a non-interactive run an "ask" kills the run, while a denied tool is simply not offered to GLM. Always use `--` before the message.
 
 ```bash
-cat -- '<brief path>' '<plan path>' | OPENCODE_CONFIG_CONTENT='{"permission":{"bash":"deny","edit":"deny","webfetch":"deny","external_directory":"deny"}}' opencode run -m zai-coding-plan/glm-5.3 -- 'Follow the review brief on stdin; the full plan follows it.'
+cat -- '<brief path>' '<plan path>' | OPENCODE_CONFIG_CONTENT='{"permission":{"bash":"deny","edit":"deny","task":"deny","webfetch":"deny","external_directory":"deny"}}' opencode run -m zai-coding-plan/glm-5.3 -- 'Follow the review brief on stdin; the full plan follows it.'
 ```
 
 Stop it with the task-stop tool if it is still running at 20 minutes. A stopped run, a non-zero exit, or empty output is a failed seat.
