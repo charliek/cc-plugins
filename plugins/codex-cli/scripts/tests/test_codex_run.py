@@ -3,6 +3,7 @@
 Run: python3 -m unittest discover -s plugins/codex-cli/scripts/tests -v
 """
 
+import importlib.util
 import json
 import os
 import re
@@ -12,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import types
 import unittest
 from pathlib import Path
 
@@ -19,16 +21,20 @@ HERE = Path(__file__).resolve().parent
 RUNNER = HERE.parent / "codex-run.py"
 FAKE = HERE / "fake_codex.py"
 
+HAS_WAITID = hasattr(os, "waitid") and hasattr(os, "WNOWAIT")
+
 # Minutes, as the runner takes them. Small enough that the whole suite runs in seconds.
 FAST_STALL = "0.02"  # 1.2 s
 
 
 def pid_alive(pid):
+    """Running, and not merely a zombie waiting to be reaped."""
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
         return False
-    return True
+    state = subprocess.run(["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True).stdout
+    return bool(state.strip()) and not state.strip().startswith("Z")
 
 
 def wait_dead(pid, timeout=5.0):
@@ -144,6 +150,56 @@ class InvocationTests(RunnerCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("looks right", result.stdout)
 
+    def test_model_id_with_a_trailing_newline_is_rejected(self):
+        self.assertEqual(self.run_runner("ok", "--model", "gpt-6-sol\n").returncode, 2)
+
+    def test_undecodable_stdin_is_a_usage_error(self):
+        # UTF-8 mode reads stdin with surrogateescape, so bad bytes get through
+        # a text read and only blow up later; a strict locale would mask that.
+        env = self.env("ok", PYTHONUTF8="1")
+        result = subprocess.run(
+            [sys.executable, str(RUNNER), "--codex-bin", str(FAKE)],
+            input=b"caf\xe9 review", capture_output=True, env=env, timeout=30,
+        )
+        self.assertEqual(result.returncode, 2, result.stderr)
+
+    def test_out_creates_missing_directories(self):
+        out = self.tmp / "plan" / "reviews" / "u1.md"
+        result = self.run_runner("ok", "--out", str(out))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("looks right", out.read_text())
+
+    def test_unwritable_out_still_delivers_the_review(self):
+        blocker = self.tmp / "a-file"
+        blocker.write_text("")
+        result = self.run_runner("ok", "--out", str(blocker / "review.md"))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("looks right", result.stdout)
+        self.assertIn("--out could not be written", result.stderr)
+
+    def test_closed_stdout_still_writes_out_and_keeps_the_review(self):
+        out = self.tmp / "review.md"
+        proc = subprocess.Popen(
+            [sys.executable, str(RUNNER), "--codex-bin", str(FAKE), "--out", str(out)],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self.env("ok"),
+        )
+        proc.stdout.close()  # the reader goes away before the review arrives
+        proc.stdin.write(b"Review this.")
+        proc.stdin.close()
+        stderr = proc.stderr.read().decode()
+        proc.stderr.close()
+        self.assertEqual(proc.wait(timeout=60), 0, stderr)
+        self.assertIn("looks right", out.read_text())
+        self.assertIn("could not write the review to stdout", stderr)
+
+    def test_inherited_ignored_sigchld_does_not_hide_the_exit_status(self):
+        result = subprocess.run(
+            [sys.executable, str(RUNNER), "--codex-bin", str(FAKE)],
+            input="Review this.", capture_output=True, text=True, env=self.env("crash"), timeout=60,
+            preexec_fn=lambda: signal.signal(signal.SIGCHLD, signal.SIG_IGN),
+        )
+        self.assertEqual(result.returncode, 3, result.stderr)
+
     def test_missing_binary(self):
         result = subprocess.run(
             [sys.executable, str(RUNNER), "--codex-bin", str(self.tmp / "nope")],
@@ -167,6 +223,15 @@ class OutcomeTests(RunnerCase):
 
     def test_unauthorized_is_auth(self):
         self.assert_no_review(self.run_runner("auth"), 8)
+
+    def test_whitespace_only_final_message_is_empty(self):
+        self.assert_no_review(self.run_runner("blank"), 4)
+
+    def test_each_failure_event_classifies_on_its_own(self):
+        for which in ("error", "turn.failed"):
+            with self.subTest(which=which):
+                self.assert_no_review(self.run_runner("limited", FAKE_CODEX_EVENTS=which), 7)
+                self.assert_no_review(self.run_runner("auth", FAKE_CODEX_EVENTS=which), 8)
 
     def test_auth_error_before_a_session_starts(self):
         self.assert_no_review(self.run_runner("auth_before_session"), 8)
@@ -196,6 +261,36 @@ class SupervisionTests(RunnerCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("steady progress", result.stdout)
         self.assertIn("since the last check", result.stderr)
+
+    def test_stderr_only_progress_also_counts(self):
+        result = self.run_runner("progress", "--stall-min", FAST_STALL, FAKE_CODEX_PROGRESS_STREAM="stderr")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    @unittest.skipUnless(HAS_WAITID, "needs os.waitid to sweep after a natural exit")
+    def test_natural_exit_sweeps_leftover_descendants(self):
+        childfile = self.tmp / "child"
+        result = self.run_runner("orphan", FAKE_CODEX_CHILDFILE=str(childfile))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(wait_dead(int(childfile.read_text())), "descendant survived a natural exit")
+
+    def test_without_waitid_a_kill_still_reaches_grandchildren(self):
+        childfile = self.tmp / "child"
+        result = self.run_runner(
+            "grandchild", "--no-waitid", "--kill-grace", "0.5", "--stall-min", FAST_STALL,
+            FAKE_CODEX_CHILDFILE=str(childfile),
+        )
+        self.assert_killed(result, 5)
+        self.assertTrue(wait_dead(int(childfile.read_text())), "grandchild survived the fallback kill")
+
+    def test_without_waitid_a_natural_exit_leaves_the_group_alone(self):
+        # Codex was reaped by poll(), so its group id may already belong to
+        # someone else: the documented trade-off is to skip the sweep.
+        childfile = self.tmp / "child"
+        result = self.run_runner("orphan", "--no-waitid", FAKE_CODEX_CHILDFILE=str(childfile))
+        child = int(childfile.read_text())
+        self.addCleanup(lambda: pid_alive(child) and os.kill(child, signal.SIGKILL))  # the one leftover
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(pid_alive(child), "the fallback swept a group it could not prove was codex's")
 
     def test_hard_cap_kills_even_while_progressing(self):
         result = self.run_runner("chatty", "--cap-min", "0.03", "--stall-min", FAST_STALL)
@@ -258,6 +353,24 @@ class SupervisionTests(RunnerCase):
     def assert_killed(self, result, code):
         self.assertEqual(result.returncode, code, result.stderr)
         self.assertTrue(wait_dead(int(self.pidfile.read_text())), "fake codex survived the kill")
+
+
+class SuperviseOrderTests(unittest.TestCase):
+    def test_an_exit_during_the_last_sleep_is_not_reported_as_capped(self):
+        spec = importlib.util.spec_from_file_location("codex_run", RUNNER)
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+        states = iter([False, True])  # codex finishes while the loop sleeps
+        runner.exited = lambda proc: next(states)
+        # A fake clock that only moves when the loop sleeps: deterministic on
+        # any runner, however slow. The sleep carries it past the cap.
+        clock = [0.0]
+        runner.time = types.SimpleNamespace(
+            monotonic=lambda: clock[0],
+            sleep=lambda seconds: clock.__setitem__(0, clock[0] + seconds),
+        )
+        state = runner.supervise(object(), (), cap_s=0.05, stall_s=100, signals=[])
+        self.assertEqual(state, "exited")
 
 
 class ChangesTests(RunnerCase):
@@ -325,9 +438,13 @@ class ChangesTests(RunnerCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         prompt = self.recorded()["prompt"]
         lines = (self.run_dir(result.stderr) / "changes.diff").read_text().split("\n")
-        for name, marker in (("app.py", "+x = 42"), ("big.py", "line_1199 = 1199")):
+        for name, first, last in (
+            ("app.py", "diff --git a/app.py b/app.py", "+x = 42"),
+            ("big.py", "===== big.py =====", "line_1199 = 1199"),
+        ):
             start, end = map(int, re.search(rf"  {name}: lines (\d+)-(\d+)", prompt).groups())
-            self.assertIn(marker, "\n".join(lines[start - 1:end]), name)
+            self.assertEqual(lines[start - 1], first, name)
+            self.assertEqual(lines[end - 1], last, name)
         self.assertIn("read that file in slices".lower(), prompt.lower())
 
     def test_index_ignores_header_lookalikes_inside_files(self):
@@ -408,6 +525,63 @@ class ChangesTests(RunnerCase):
             self.assertIn(f"===== {name} (not inlined:", result.stdout)
         self.assertIn("read it from the worktree before giving a verdict", result.stdout)
         self.assertNotIn("x = 1\nx = 1", result.stdout)
+
+    def test_untracked_trailing_blank_lines_survive(self):
+        (self.repo / "golden.txt").write_text("alpha\n\n\n")
+        result = self.run_runner("ok", "--changes-since", "HEAD", "--bundle-only", cwd=self.repo, prompt="")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("===== golden.txt =====\nalpha\n\n\n", result.stdout)
+
+    def test_non_utf8_files_do_not_crash_the_bundle(self):
+        (self.repo / "latin1.txt").write_bytes(b"caf\xe9\n")
+        self.git("add", "latin1.txt")
+        self.git("commit", "-qm", "latin1")
+        (self.repo / "latin1.txt").write_bytes(b"caf\xe9 au lait\n")
+        result = self.run_runner("ok", "--changes-since", "HEAD", "--bundle-only", cwd=self.repo, prompt="")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("au lait", result.stdout)
+
+    def test_index_names_survive_spaces_renames_and_deletions(self):
+        tricky = self.repo / "dir b" / "name.py"
+        tricky.parent.mkdir()
+        tricky.write_text("a = 1\n")
+        # A mode-only change has no ---/+++ lines: its name comes from the header alone.
+        script = self.repo / "dir b" / "run.sh"
+        script.write_text("echo hi\n")
+        (self.repo / "old.py").write_text("\n".join(f"v{i} = {i}" for i in range(50)) + "\n")
+        (self.repo / "gone.py").write_text("g = 1\n")
+        self.git("add", ".")
+        self.git("commit", "-qm", "names")
+        tricky.write_text("a = 2\n")
+        script.chmod(0o755)
+        self.git("mv", "old.py", "new.py")
+        self.git("rm", "-q", "gone.py")
+        (self.repo / "filler.py").write_text("".join(f"f_{i} = {i}\n" for i in range(1000)))
+        result = self.run_runner("ok", "--changes-since", "HEAD", "--keep", cwd=self.repo)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        index = dict(re.findall(r"^  (.+): lines (\d+-\d+)$", self.recorded()["prompt"], re.M))
+        self.assertIn("dir b/name.py", index)
+        self.assertIn("dir b/run.sh", index)
+        self.assertIn("new.py", index)
+        self.assertIn("gone.py", index)
+        self.assertNotIn("name.py", index)
+
+    def test_quoted_paths_keep_their_real_names_in_the_index(self):
+        odd = self.repo / "tab\there.py"
+        odd.write_text("t = 1\n")
+        self.git("add", ".")
+        self.git("commit", "-qm", "odd name")
+        odd.write_text("t = 2\n")
+        (self.repo / "filler.py").write_text("".join(f"f_{i} = {i}\n" for i in range(1000)))
+        result = self.run_runner("ok", "--changes-since", "HEAD", "--keep", cwd=self.repo)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("  tab\there.py: lines ", self.recorded()["prompt"])
+
+    def test_untracked_files_with_non_utf8_names_are_bundled(self):
+        (self.repo / os.fsdecode(b"caf\xe9.py")).write_text("print('latin-1 name')\n")
+        result = self.run_runner("ok", "--changes-since", "HEAD", "--bundle-only", cwd=self.repo, prompt="")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("print('latin-1 name')", result.stdout)
 
     def test_textconv_filters_apply(self):
         (self.repo / ".gitattributes").write_text("*.up diff=upper\n")

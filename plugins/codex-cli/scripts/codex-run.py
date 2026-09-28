@@ -110,15 +110,23 @@ def say(message: str) -> None:
 
 def resolve_model(value: str) -> str:
     model = ALIASES.get(value, value)
-    if not MODEL_ID.match(model):
+    if not MODEL_ID.fullmatch(model):
         raise ValueError(f"invalid model id: {value!r}")
     return model
 
 
 def git(*args: str, cwd=None) -> str:
-    return subprocess.run(
-        ["git", *args], check=True, capture_output=True, text=True, cwd=cwd, env=GIT_ENV
-    ).stdout
+    return git_bytes(*args, cwd=cwd).decode("utf-8", errors="replace")
+
+
+def git_bytes(*args: str, cwd=None) -> bytes:
+    try:
+        return subprocess.run(
+            ["git", *args], check=True, capture_output=True, cwd=cwd, env=GIT_ENV
+        ).stdout
+    except subprocess.CalledProcessError as err:
+        err.stderr = (err.stderr or b"").decode("utf-8", errors="replace")
+        raise
 
 
 def is_text(path: Path) -> bool:
@@ -148,7 +156,8 @@ def build_changes(base: str, run_dir: Path) -> str:
     ranges: list = []  # (name, first line, last line), 1-based
 
     def add(text: str) -> None:
-        out.extend(text.rstrip("\n").split("\n"))
+        # Only the terminating newline goes: a file's own trailing blank lines stay.
+        out.extend((text[:-1] if text.endswith("\n") else text).split("\n"))
 
     log = g("log", "--oneline", f"{base}..HEAD")
     if log.strip():
@@ -160,22 +169,27 @@ def build_changes(base: str, run_dir: Path) -> str:
     # the index even with optional locks off. Plumbing skips textconv filters
     # unless asked, so ask.
     add(f"--- diff against {base} (committed + staged + unstaged) ---")
-    current = None
-    for line in g("diff-index", "-p", "-M", "--textconv", base).rstrip("\n").split("\n"):
+    # Names come from git's own NUL-separated list, which diffs the same queue
+    # in the same order as the patch -- no parsing of quoted or odd paths.
+    names = [n for n in g("diff-index", "--name-only", "-z", "-M", base).split("\0") if n]
+    starts = []
+    patch = g("diff-index", "-p", "-M", "--textconv", base)
+    for line in (patch[:-1] if patch.endswith("\n") else patch).split("\n"):
         # In a patch, content lines carry a +/-/space prefix, so an unprefixed
         # `diff --git` line is always a real file header.
         if line.startswith("diff --git "):
-            if current:
-                ranges.append((current[0], current[1], len(out)))
-            current = (line.rsplit(" b/", 1)[-1], len(out) + 1)
+            starts.append((len(out) + 1, line))
         out.append(line)
-    if current:
-        ranges.append((current[0], current[1], len(out)))
+    for i, (first, header) in enumerate(starts):
+        last = starts[i + 1][0] - 1 if i + 1 < len(starts) else len(out)
+        name = names[i] if len(names) == len(starts) else header[len("diff --git "):]
+        ranges.append((name, first, last))
 
-    untracked = [p for p in g("ls-files", "--others", "--exclude-standard", "-z").split("\0") if p]
+    raw = git_bytes("ls-files", "--others", "--exclude-standard", "-z", cwd=top)
     blocks = []
-    for name in untracked:
-        path = top / name
+    for entry in (e for e in raw.split(b"\0") if e):
+        path = top / os.fsdecode(entry)  # lossless, even for non-UTF-8 names
+        name = entry.decode("utf-8", errors="replace")
         if path.is_symlink():
             blocks.append((name, f"===== {name} (symlink -> {os.readlink(path)}) ====="))
             continue
@@ -231,25 +245,30 @@ def read_prompt(args: argparse.Namespace) -> str:
     # Several files join in order, so a panel seat can pass a short brief and
     # then the plan file itself, with no shell plumbing to combine them.
     if args.prompt_file:
-        return "\n\n".join(Path(f).read_text() for f in args.prompt_file)  # OSError -> usage error
+        return "\n\n".join(Path(f).read_text(encoding="utf-8") for f in args.prompt_file)
     if sys.stdin.isatty():
         return ""
-    return sys.stdin.read()
+    return sys.stdin.buffer.read().decode("utf-8")  # errors surface as a usage error
 
 
 def log_size(*paths: Path) -> int:
     return sum(p.stat().st_size for p in paths if p.exists())
 
 
+# os.waitid reached macOS only in Python 3.13; --no-waitid forces the fallback in tests.
+CAN_PEEK = hasattr(os, "waitid") and hasattr(os, "WNOWAIT")
+
+
 def exited(proc: subprocess.Popen) -> bool:
     """Has codex exited? Checked without reaping it where the OS allows.
 
     An exited-but-unreaped leader keeps its pid, so its process-group id cannot
-    be reused by an unrelated group before kill_group sweeps it.
+    be reused by an unrelated group before kill_group sweeps it. Without
+    waitid, poll() reaps; kill_group then leaves the group alone.
     """
     if proc.returncode is not None:
         return True
-    if hasattr(os, "waitid") and hasattr(os, "WNOWAIT"):
+    if CAN_PEEK:
         try:
             return os.waitid(os.P_PID, proc.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is not None
         except ChildProcessError:
@@ -268,16 +287,24 @@ def kill_group(proc: subprocess.Popen, grace: float) -> None:
     """Stop codex and everything it started, whether or not codex is still up.
 
     SIGTERM first so codex can shut down cleanly, then SIGKILL to the whole
-    group regardless: a shell codex spawned can ignore SIGTERM or outlive
-    codex itself, and a leftover process keeps the thread locked. Codex is
-    reaped only after the sweep, so the group id is still ours when it lands.
+    group: a shell codex spawned can ignore SIGTERM or outlive codex itself,
+    and a leftover process keeps the thread locked. The sweep lands only while
+    codex is unreaped (alive or a zombie), because only then is the group id
+    guaranteed to still be ours. With waitid that is always the case here.
+    Without it, a codex that already exited on its own was reaped by poll(),
+    so its group is not swept -- a stray descendant beats killing a stranger.
     """
-    if not exited(proc):
+    if proc.returncode is None and not (CAN_PEEK and exited(proc)):
         signal_group(proc.pid, signal.SIGTERM)
         deadline = time.monotonic() + grace
-        while not exited(proc) and time.monotonic() < deadline:
+        while time.monotonic() < deadline:
+            # Without waitid, checking would reap codex and forfeit the sweep,
+            # so the fallback simply waits out the grace period.
+            if CAN_PEEK and exited(proc):
+                break
             time.sleep(0.05)
-    signal_group(proc.pid, signal.SIGKILL)
+    if proc.returncode is None:
+        signal_group(proc.pid, signal.SIGKILL)
     try:
         proc.wait(timeout=5.0)
     except subprocess.TimeoutExpired:
@@ -330,11 +357,12 @@ def supervise(proc: subprocess.Popen, logs: tuple, cap_s: float, stall_s: float,
     start = last_growth = last_report = time.monotonic()
     size = report_size = log_size(*logs)
     while True:
+        # Checked first on every pass, so a codex that finished during the last
+        # sleep is reported as exited rather than capped or stalled.
         if signals:
             return "interrupted"
         if exited(proc):
             return "exited"
-        time.sleep(poll)
         now = time.monotonic()
         current = log_size(*logs)
         if current != size:
@@ -349,6 +377,7 @@ def supervise(proc: subprocess.Popen, logs: tuple, cap_s: float, stall_s: float,
                 f"{(current - report_size) / 1024:.1f} KB since the last check"
             )
             last_report, report_size = now, current
+        time.sleep(poll)
 
 
 def print_bundle(base) -> int:
@@ -387,11 +416,15 @@ def parse_args(argv: list) -> argparse.Namespace:
     parser.add_argument("--bundle-only", action="store_true", help="print the --changes-since bundle for another reviewer and exit; no codex run")
     parser.add_argument("--codex-bin", default="codex", help=argparse.SUPPRESS)
     parser.add_argument("--kill-grace", type=float, default=KILL_GRACE_SECONDS, help=argparse.SUPPRESS)
+    parser.add_argument("--no-waitid", action="store_true", help=argparse.SUPPRESS)
     return parser.parse_args(argv)
 
 
 def main(argv: list) -> int:
+    global CAN_PEEK
     args = parse_args(argv)
+    if args.no_waitid:
+        CAN_PEEK = False
     try:
         model = resolve_model(args.model)
     except ValueError as err:
@@ -432,7 +465,7 @@ def main(argv: list) -> int:
             return EXIT["usage"]
 
     prompt_path = run_dir / "prompt.txt"
-    prompt_path.write_text(prompt)
+    prompt_path.write_text(prompt, encoding="utf-8")
     last = run_dir / "last.txt"
     stdout_log = run_dir / "stdout.log"
     stderr_log = run_dir / "stderr.log"
@@ -458,6 +491,9 @@ def main(argv: list) -> int:
 
     for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
         signal.signal(sig, on_signal)
+    # An inherited SIGCHLD=SIG_IGN makes the OS reap codex on its own, which
+    # breaks both the exit status and the unreaped-group guarantee above.
+    signal.signal(signal.SIGCHLD, signal.SIG_DFL)
     if signals:
         shutil.rmtree(run_dir, ignore_errors=True)
         return 128 + signals[0]
@@ -472,6 +508,10 @@ def main(argv: list) -> int:
     finally:
         if proc is not None:
             kill_group(proc, args.kill_grace)
+        # Codex is gone; from here a signal may simply end the runner, so a
+        # late one can never be swallowed into a successful exit.
+        for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+            signal.signal(sig, signal.SIG_DFL)
 
     # A signal that landed while codex was finishing or being killed still wins.
     if signals:
@@ -480,7 +520,7 @@ def main(argv: list) -> int:
     if state == "exited":
         if proc.returncode != 0:
             outcome = classify_failure(stdout_log, stderr_log)
-        elif not last.exists() or not last.read_text().strip():
+        elif not last.exists() or not last.read_text(errors="replace").strip():
             outcome = "empty"
         else:
             outcome = "ok"
@@ -498,11 +538,30 @@ def main(argv: list) -> int:
         say(f"no review: treat this as a failed route, not as 'no findings'. Logs kept in {run_dir}")
         return EXIT[outcome]
 
-    message = last.read_text()
+    message = last.read_text(errors="replace")
+    # Two independent destinations: neither failure may cost the other, and
+    # the run directory (with last.txt) is kept if stdout could not take it.
+    delivered = True
+    try:
+        sys.stdout.write(message if message.endswith("\n") else message + "\n")
+        sys.stdout.flush()
+    except OSError as err:
+        delivered = False
+        say(f"could not write the review to stdout ({err}); it is in {last}")
+        # Point stdout at /dev/null, or the interpreter's exit-time flush hits
+        # the same broken pipe and turns a finished review into exit 120.
+        try:
+            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        except OSError:
+            pass
     if args.out:
-        Path(args.out).write_text(message)
-    sys.stdout.write(message if message.endswith("\n") else message + "\n")
-    if not args.keep:
+        try:
+            out_path = Path(args.out)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(message, encoding="utf-8")
+        except OSError as err:
+            say(f"--out could not be written ({err}); the review is on stdout")
+    if delivered and not args.keep:
         shutil.rmtree(run_dir, ignore_errors=True)
     return EXIT["ok"]
 

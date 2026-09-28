@@ -146,11 +146,13 @@ marks from the plan's work breakdown). If empty, derive it from the diff.
 
    1. `cursor:cursor-rescue` with the same prompt, stated as a **read-only
       review — make no edits** (that is what switches it to Cursor's
-      `--mode plan`; it has no `--read-only` flag), and the same changes:
-      `uv run --script '<runner path>' --changes-since <ref> --bundle-only` prints
-      the exact bundle codex got, as a file path once it is big. It runs Grok
-      4.7 through Cursor, and its foreground shell call is capped at 10
-      minutes. Do not retry codex after a `7` — the retry hits the same quota.
+      `--mode plan`; it has no `--read-only` flag), and the same changes: the
+      failed run's `<run-dir>/prompt.txt` is exactly what codex got, prompt
+      and bundle together (the runner keeps its run directory on failure and
+      names it in its second line). `uv run --script '<runner path>'
+      --changes-since <ref> --bundle-only` rebuilds the bundle from the tree
+      as it is now. It runs Grok 4.7 through Cursor, and its foreground shell
+      call is capped at 10 minutes. Do not retry codex after a `7` — the retry hits the same quota.
    2. If Cursor is unavailable: the CodeRabbit CLI —
       `coderabbit review --agent --uncommitted --include-untracked -c <instructions>.md`
       for one uncommitted commit, `--base-commit <batch base>

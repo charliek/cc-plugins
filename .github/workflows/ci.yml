@@ -25,6 +25,8 @@ jobs:
           - { os: ubuntu-latest, python: "3.9" }
           - { os: ubuntu-latest, python: "3.13" }
           - { os: macos-latest, python: "3.13" }
+          # macOS Python before 3.13 has no os.waitid: the runner's fallback path.
+          - { os: macos-latest, python: "3.12" }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
