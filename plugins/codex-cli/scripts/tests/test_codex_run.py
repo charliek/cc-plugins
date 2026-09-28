@@ -578,7 +578,10 @@ class ChangesTests(RunnerCase):
         self.assertIn("  tab\there.py: lines ", self.recorded()["prompt"])
 
     def test_untracked_files_with_non_utf8_names_are_bundled(self):
-        (self.repo / os.fsdecode(b"caf\xe9.py")).write_text("print('latin-1 name')\n")
+        try:
+            (self.repo / os.fsdecode(b"caf\xe9.py")).write_text("print('latin-1 name')\n")
+        except OSError:  # APFS (macOS) only accepts UTF-8 names
+            self.skipTest("this filesystem rejects non-UTF-8 file names")
         result = self.run_runner("ok", "--changes-since", "HEAD", "--bundle-only", cwd=self.repo, prompt="")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("print('latin-1 name')", result.stdout)
