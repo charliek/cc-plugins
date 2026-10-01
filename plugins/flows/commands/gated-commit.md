@@ -82,7 +82,7 @@ marks from the plan's work breakdown). If empty, derive it from the diff.
    - **Astra-tier units are reviewed alone**, never batched.
 
    **Pick the model by complexity** — the same way the gauntlet picks
-   implementers: **`gpt-6-sol`** for routine work; **`gpt-6-astra`** when the
+   implementers: **`gpt-6.1-sol`** for routine work; **`gpt-6-astra`** when the
    unit is complex or subtle (the bar that puts its implementation on opus or
    fable) or touches concurrency/ordering, data integrity, auth/security,
    money, migrations, or wire protocols. The plan's `review` column decides
@@ -184,7 +184,7 @@ marks from the plan's work breakdown). If empty, derive it from the diff.
 6. **Commit.** One commit, message = what changed and why, plus one line per
    notable review finding and its disposition ("codex review finding" /
    "skipped: pre-existing, plan §9"), a `review:` line naming the model that
-   actually ran and what it covered (`review: gpt-6-sol`,
+   actually ran and what it covered (`review: gpt-6.1-sol`,
    `review: gpt-6-astra`, `review: pending (batch C3–C5)`,
    `review: grok-4.7-high via cursor (codex usage limit)`), and a
    `simplify:` line when a pass ran or a planned one was dropped. Follow the

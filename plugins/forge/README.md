@@ -28,7 +28,7 @@ fable-class model.
 ### `/forge:gated-commit [scope notes]`
 
 Per-unit inner loop: repo gate → simplify when it earns its cost → Codex
-correctness review, `gpt-6-sol` for routine work and `gpt-6-astra` for
+correctness review, `gpt-6.1-sol` for routine work and `gpt-6-astra` for
 complex or high-gravity work (20/25-minute caps, progress checked every 10
 minutes), per unit or shared by a batch of small units → dispositions → one
 commit. Docs-only diffs skip simplify and the review and say so in the
@@ -54,7 +54,7 @@ the single most critical piece, if any.
 | Fable-class | `fable` | `fireworks/kimi-k3` | `claude-opus-5-thinking-high` |
 | Opus-class | `opus` | `grok-4.7` | `grok-4.7-high` |
 | Sonnet-class | `sonnet` | `glm-5.3` | `composer-2.5` |
-| Review (sol / astra) | codex-cli runner | `gpt-6-sol` / `gpt-6-astra` subagent | codex-cli runner |
+| Review (sol / astra) | codex-cli runner | `gpt-6.1-sol` / `gpt-6-astra` subagent | codex-cli runner |
 | Review fallback (one) | `cursor:cursor-rescue` (Grok 4.7), or CodeRabbit CLI if Cursor is unavailable; else self | `grok-4.7`; else self | `grok-4.7-high`; else self |
 | Plan panel | runner astra, opencode GLM, CodeRabbit | astra, Grok, GLM subagents | runner astra, Grok, Gemini subagents |
 
@@ -69,12 +69,12 @@ Use the ChatGPT-plan ids only, unless the human opts in. Never use Cursor
 `…-fast` slugs for subagents.
 
 gx effort is not settable per spawn. Pin it per model in user config, then
-restart (`gpt-6-sol` needs a gx build with its preset — charliek/grok-build#21;
+restart (`gpt-6.1-sol` needs a gx build with its preset — charliek/grok-build#21;
 until then the runner covers the sol seat):
 
 ```toml
 # ~/.grok/providers.toml
-[model."gpt-6-sol"]
+[model."gpt-6.1-sol"]
 reasoning_effort = "high"
 
 [model."gpt-6-astra"]

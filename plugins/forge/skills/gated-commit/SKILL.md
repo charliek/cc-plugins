@@ -2,7 +2,7 @@
 name: gated-commit
 description: >-
   Run uncommitted changes through the per-commit loop: repo gate, simplify
-  when it earns its cost, Codex correctness review (gpt-6-sol or gpt-6-astra,
+  when it earns its cost, Codex correctness review (gpt-6.1-sol or gpt-6-astra,
   per unit or per batch), dispositions, one commit. Use when
   the user asks for /gated-commit, /forge:gated-commit, or a hardened commit
   without a full gauntlet.

@@ -32,7 +32,7 @@ A batch that stalls or hits the cap is too big for one pass: split it into two n
 
 ## 5. Codex review (read-only)
 
-**Tier** — from the unit's `review` mark, or standalone from the diff: `gpt-6-sol` for routine work; `gpt-6-astra` when the unit is complex or subtle (the opus/fable bar) or touches concurrency/ordering, data integrity, auth/security, money, migrations, or wire protocols.
+**Tier** — from the unit's `review` mark, or standalone from the diff: `gpt-6.1-sol` for routine work; `gpt-6-astra` when the unit is complex or subtle (the opus/fable bar) or touches concurrency/ordering, data integrity, auth/security, money, migrations, or wire protocols.
 
 **Prompt** — CORRECTNESS bugs, not style (simplify owns that). Sol gets a straightforward correctness pass; astra gets an explicitly adversarial one (assume the diff is wrong; hunt for the exploit or corruption path) plus the plan's panel findings as a hunt list when a plan exists. Always include:
 
@@ -66,9 +66,9 @@ Inside a gauntlet, add `--out '<plan artifact folder>/reviews/<unit>.md'` to kee
 
 ### gx — native GPT-6 subagent
 
-Spawn `explore` with `model: gpt-6-sol` or `model: gpt-6-astra`, `run_in_background: true`, description `(gpt-6-sol) Review …`, and the prompt plus the `--bundle-only` text inline. Then wait on its task output in 10-minute slices up to the cap (20 minutes; 25 for astra): after each slice, check it is still producing and kill a flat one early. A foreground spawn would block you from doing either. Never spawn an `openrouter/gpt-*` id unless the human opted in.
+Spawn `explore` with `model: gpt-6.1-sol` or `model: gpt-6-astra`, `run_in_background: true`, description `(gpt-6.1-sol) Review …`, and the prompt plus the `--bundle-only` text inline. Then wait on its task output in 10-minute slices up to the cap (20 minutes; 25 for astra): after each slice, check it is still producing and kill a flat one early. A foreground spawn would block you from doing either. Never spawn an `openrouter/gpt-*` id unless the human opted in.
 
-If gx rejects the `gpt-6-*` slug (a build without the preset — see `harness.md`), that is not a failed review: run the codex runner from the orchestrator's shell instead, as above. On auth/credit/rate-limit, empty output, a flat subagent, or a cap kill: **one** fallback — `grok-4.7` explore with the same prompt — then self-review.
+If gx rejects the GPT-6 slug (a build without the preset — see `harness.md`), that is not a failed review: run the codex runner from the orchestrator's shell instead, as above. On auth/credit/rate-limit, empty output, a flat subagent, or a cap kill: **one** fallback — `grok-4.7` explore with the same prompt — then self-review.
 
 ## 6. Disposition
 

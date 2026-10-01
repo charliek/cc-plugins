@@ -56,11 +56,11 @@ Fable-class orchestrates and implements only the single most critical/complex pi
 | Fable-class — orchestrator; implements only the single most critical piece | `fable` | `fireworks/kimi-k3` | `claude-opus-5-thinking-high` |
 | Opus-class — complex/subtle implementation | `opus` | `grok-4.7` | `grok-4.7-high` |
 | Sonnet-class — routine implementation, explore, simplify reviewers + fixer | `sonnet` | `glm-5.3` | `composer-2.5` |
-| Codex reviewer (read-only; `sol` or `astra` per unit) | codex runner `--model sol\|astra` | `gpt-6-sol` / `gpt-6-astra` explore subagent (stock grok: the runner) | codex runner, from the orchestrator's shell |
+| Codex reviewer (read-only; `sol` or `astra` per unit) | codex runner `--model sol\|astra` | `gpt-6.1-sol` / `gpt-6-astra` explore subagent (stock grok: the runner) | codex runner, from the orchestrator's shell |
 | Reviewer fallback (one) | `cursor:cursor-rescue` read-only (Grok 4.7), or the CodeRabbit CLI if Cursor is unavailable; else self-review | `grok-4.7` explore; else self-review | `grok-4.7-high` explore; else self-review |
 | Plan panel seats | codex runner `--model astra`, `opencode run` (GLM), `coderabbit:code-reviewer` | `gpt-6-astra`, `grok-4.7`, `glm-5.3` subagents (stock grok: runner for the astra seat) | codex runner `--model astra` (shell), `grok-4.7-high`, `gemini-3.7-flash-high` subagents |
 
-This table is the user's direct request for per-role models — always pass `model` on spawn. Prefix each subagent `description` with the model actually used, e.g. `(grok-4.7) Implement U2`; label runner calls the same way, e.g. `(gpt-6-sol) Review U2`.
+This table is the user's direct request for per-role models — always pass `model` on spawn. Prefix each subagent `description` with the model actually used, e.g. `(grok-4.7) Implement U2`; label runner calls the same way, e.g. `(gpt-6.1-sol) Review U2`.
 
 Cursor never gets an OpenAI model as a subagent: OpenAI models are leaving Cursor and were costly on this plan. Its Codex seats run through the codex CLI on the ChatGPT plan instead, the same way Claude Code's do.
 
@@ -108,21 +108,21 @@ Exit `0` prints the review on stdout. Anything else is "no review": `3` failed, 
 
 ## Codex-first review contract
 
-Correctness review is Codex-first, not Codex-only, and tiered like implementation: **`gpt-6-sol`** for routine units, **`gpt-6-astra`** for units that are complex or subtle (the opus/fable bar) or touch concurrency/ordering, data integrity, auth/security, money, migrations, or wire protocols. The plan's `review` mark decides; `plan.md` defines it. Fall back only when the Codex route fails (non-zero runner exit, spawn/auth failure, empty, stalled, or capped) — **one** fallback per review, per the table. Record the reviewer that actually ran in the commit message, e.g. `review: gpt-6-sol`, `review: gpt-6-astra (covers U3–U5)`, or `review: grok-4.7 (codex usage limit)`. If every route fails, self-review, say so in the commit message, and surface it in the final status — never commit silently unreviewed.
+Correctness review is Codex-first, not Codex-only, and tiered like implementation: **`gpt-6.1-sol`** for routine units, **`gpt-6-astra`** for units that are complex or subtle (the opus/fable bar) or touch concurrency/ordering, data integrity, auth/security, money, migrations, or wire protocols. The plan's `review` mark decides; `plan.md` defines it. Fall back only when the Codex route fails (non-zero runner exit, spawn/auth failure, empty, stalled, or capped) — **one** fallback per review, per the table. Record the reviewer that actually ran in the commit message, e.g. `review: gpt-6.1-sol`, `review: gpt-6-astra (covers U3–U5)`, or `review: grok-4.7 (codex usage limit)`. If every route fails, self-review, say so in the commit message, and surface it in the final status — never commit silently unreviewed.
 
-**OpenRouter GPT models are never auto-selected.** `openrouter/gpt-*` ids (any `gpt-6-*` or `gpt-5.6-*` twin) are metered. On gx, spawn only the ChatGPT-plan `gpt-6-sol` / `gpt-6-astra`; use an OpenRouter id only when the human explicitly says it is OK for this run.
+**OpenRouter GPT models are never auto-selected.** `openrouter/gpt-*` ids (any `gpt-6-*`, `gpt-6.1-*`, or `gpt-5.6-*` twin) are metered. On gx, spawn only the ChatGPT-plan `gpt-6.1-sol` / `gpt-6-astra`; use an OpenRouter id only when the human explicitly says it is OK for this run.
 
 **gx native seats.** gx cannot set reasoning effort per spawn, so pin it per model in `~/.grok/providers.toml` and restart gx:
 
 ```toml
-[model."gpt-6-sol"]
+[model."gpt-6.1-sol"]
 reasoning_effort = "high"
 
 [model."gpt-6-astra"]
 reasoning_effort = "high"
 ```
 
-gx ships a `gpt-6-astra` preset; `gpt-6-sol` arrives with charliek/grok-build#21. Until a gx build lists it, or on stock grok (no GPT models at all), a rejected `gpt-6-*` spawn is not a failed review: run the same review through the codex runner from the orchestrator's shell instead.
+gx ships a `gpt-6-astra` preset; `gpt-6.1-sol` arrives with charliek/grok-build#21. Until a gx build lists it, or on stock grok (no GPT models at all), a rejected GPT-6 spawn is not a failed review: run the same review through the codex runner from the orchestrator's shell instead.
 
 ## Plans directory
 

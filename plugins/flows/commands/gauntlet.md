@@ -123,7 +123,7 @@ normal; a plan with no simplify passes is fine when nothing warrants one.
 
 **Review marks.** Every commit gets an external review before the branch is
 pushed; the plan says how. Name each commit's reviewer tier — `sol`
-(`gpt-6-sol`) for routine work, `astra` (`gpt-6-astra`) when the commit is
+(`gpt-6.1-sol`) for routine work, `astra` (`gpt-6-astra`) when the commit is
 complex or subtle (the bar that puts implementation on opus or fable) or
 touches concurrency/ordering, data integrity, auth/security, money,
 migrations, or wire protocols — and group small consecutive sol commits into

@@ -57,7 +57,7 @@ Just the per-commit inner loop, for any change that deserves discipline
 without the full flow: repo gate (from CLAUDE.md) → `/simplify` **only where
 it earns its cost** (core interfaces, lots of new logic, repeated logic;
 sonnet or opus, never the top-tier model) → codex review through the
-`codex-cli` runner, **`gpt-6-sol` for routine work and `gpt-6-astra` for
+`codex-cli` runner, **`gpt-6.1-sol` for routine work and `gpt-6-astra` for
 complex or high-gravity work**, 20/25-minute caps with a progress check every
 10 minutes, one fallback (Cursor Grok 4.7, or the CodeRabbit CLI if Cursor is unavailable) →
 findings dispositioned → one commit. Small consecutive commits may share one

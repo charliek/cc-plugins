@@ -88,7 +88,7 @@ class InvocationTests(RunnerCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("no issue — looks right", result.stdout)
         argv = self.recorded()["argv"]
-        self.assertEqual(argv[:6], ["exec", "--json", "-s", "read-only", "-m", "gpt-6-sol"])
+        self.assertEqual(argv[:6], ["exec", "--json", "-s", "read-only", "-m", "gpt-6.1-sol"])
         self.assertIn('model_reasoning_effort="high"', argv)
         self.assertEqual(argv[-1], "-")
         self.assertEqual(self.recorded()["prompt"], "Review this.")
@@ -151,7 +151,7 @@ class InvocationTests(RunnerCase):
         self.assertIn("looks right", result.stdout)
 
     def test_model_id_with_a_trailing_newline_is_rejected(self):
-        self.assertEqual(self.run_runner("ok", "--model", "gpt-6-sol\n").returncode, 2)
+        self.assertEqual(self.run_runner("ok", "--model", "gpt-6.1-sol\n").returncode, 2)
 
     def test_undecodable_stdin_is_a_usage_error(self):
         # UTF-8 mode reads stdin with surrogateescape, so bad bytes get through

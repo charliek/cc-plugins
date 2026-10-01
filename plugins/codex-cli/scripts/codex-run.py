@@ -56,7 +56,7 @@ import tempfile
 import time
 from pathlib import Path
 
-ALIASES = {"sol": "gpt-6-sol", "astra": "gpt-6-astra", "luna": "gpt-6-luna"}
+ALIASES = {"sol": "gpt-6.1-sol", "astra": "gpt-6-astra", "luna": "gpt-6-luna"}
 # Astra is the slower, deeper model; everything else gets the shorter cap.
 CAP_MINUTES = {"gpt-6-astra": 25.0}
 DEFAULT_CAP_MINUTES = 20.0

@@ -37,4 +37,4 @@ Check that the Codex CLI is ready to use, then report a concise readiness summar
    - Credentials present? (from `codex login status` — local check)
    - Next steps if anything is missing (install, or `codex login`).
 
-5. **Mention model selection:** `rescue` and `review` pin `gpt-6-sol` and `adversarial-review` pins `gpt-6-astra`, all at `model_reasoning_effort="high"` (they do NOT inherit `~/.codex/config.toml`'s default). Override per call with `--model sol|astra|luna|<id>` and `--effort none|minimal|low|medium|high|xhigh|max|ultra`.
+5. **Mention model selection:** `rescue` and `review` pin `gpt-6.1-sol` and `adversarial-review` pins `gpt-6-astra`, all at `model_reasoning_effort="high"` (they do NOT inherit `~/.codex/config.toml`'s default). Override per call with `--model sol|astra|luna|<id>` and `--effort none|minimal|low|medium|high|xhigh|max|ultra`.
