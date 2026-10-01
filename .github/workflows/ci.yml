@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  runner-tests:
+    # codex-run.py supervises every scripted Codex call in the flows; its
+    # process-group and waitid handling differ between Linux and macOS, and it
+    # promises Python 3.9+.
+    name: codex-run tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.9" }
+          - { os: ubuntu-latest, python: "3.13" }
+          - { os: macos-latest, python: "3.13" }
+          # macOS Python before 3.13 has no os.waitid: the runner's fallback path.
+          - { os: macos-latest, python: "3.12" }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      # For the test that runs the script through its `uv run --script` shebang.
+      - uses: astral-sh/setup-uv@v10.2.0
+      - run: python -m unittest discover -s plugins/codex-cli/scripts/tests -v
+
+  plugin-manifests:
+    name: plugin manifests validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      - run: npm install -g @anthropic-ai/claude-code
+      - run: claude plugin validate .
+
+  doc-snippets:
+    # Agents copy these snippets and run them; one that doesn't parse fails mid-flow.
+    name: shell snippets in docs parse
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 .github/scripts/check_doc_snippets.py

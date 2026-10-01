@@ -89,9 +89,9 @@ convention.
 ## Phase 3 — Set the secrets on each repo
 
 ```bash
-CLIENT_ID=<your-client-id>                 # the alphanumeric ID from Phase 1
+CLIENT_ID="<your-client-id>"                 # the alphanumeric ID from Phase 1
 PEM=~/Downloads/<your-key>.private-key.pem
-REPO=<owner>/<repo>
+REPO="<owner>/<repo>"
 
 gh secret set RELEASE_BOT_CLIENT_ID -R "$REPO" -b "$CLIENT_ID"
 gh secret set RELEASE_BOT_APP_KEY   -R "$REPO" < "$PEM"
@@ -130,8 +130,8 @@ This is the gotcha that bit roost on v0.0.5 — classic protection's
 ### Step 4.1 — Create the ruleset
 
 ```bash
-REPO=<owner>/<repo>
-APP_ID=<your-app-id>
+REPO="<owner>/<repo>"
+APP_ID="<your-app-id>"
 
 cat > /tmp/main-ruleset.json <<JSON
 {
@@ -196,8 +196,8 @@ Step 4.1, which would either fail with "ruleset name already exists"
 or create a duplicate.
 
 ```bash
-REPO=<owner>/<repo>
-APP_ID=<your-app-id>
+REPO="<owner>/<repo>"
+APP_ID="<your-app-id>"
 
 # Find the ruleset's id
 RULESET_ID="$(gh api "/repos/${REPO}/rulesets" \

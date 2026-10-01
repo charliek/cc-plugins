@@ -1,8 +1,9 @@
 ---
 name: gated-commit
 description: >-
-  Run uncommitted changes through the per-commit loop: repo gate, conditional
-  simplify, Sol-first correctness review, dispositions, one commit. Use when
+  Run uncommitted changes through the per-commit loop: repo gate, simplify
+  when it earns its cost, Codex correctness review (gpt-6.1-sol or gpt-6-astra,
+  per unit or per batch), dispositions, one commit. Use when
   the user asks for /gated-commit, /forge:gated-commit, or a hardened commit
   without a full gauntlet.
 argument-hint: "[--harness gx|cursor|claude] [what this commit is / scope notes]"

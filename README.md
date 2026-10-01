@@ -11,7 +11,7 @@ Shared Claude Code plugins for development workflows.
 | [deploy](plugins/deploy/) | Commands | `/deploy:build` for date-based releases that trigger Docker builds |
 | [planning](plugins/planning/) | Commands | `/planning:ask-codex`, `/planning:ask-glm`, `/planning:ask-coderabbit`, `/planning:ask-panel` for AI-powered plan review |
 | [cursor](plugins/cursor/) | Commands | `/cursor:rescue`, `/cursor:review`, `/cursor:adversarial-review` — delegate coding tasks and reviews to the Cursor agent CLI |
-| [codex-cli](plugins/codex-cli/) | Commands | `/codex-cli:rescue`, `/codex-cli:review`, `/codex-cli:adversarial-review` — delegate coding tasks and reviews directly to `codex exec` (brokerless, parallel-safe) |
+| [codex-cli](plugins/codex-cli/) | Commands | `/codex-cli:rescue`, `/codex-cli:review`, `/codex-cli:adversarial-review` — delegate coding tasks and reviews directly to `codex exec` (brokerless, parallel-safe), plus the supervised `codex-run.py` runner the flows use for every scripted Codex review |
 | [grok](plugins/grok/) | Commands | `/grok:rescue` — delegate coding tasks to the Grok CLI (`grok -p`, brokerless, parallel-safe) |
 | [flutter-drive](plugins/flutter-drive/) | Skill | `flutter-drive:flutter-drive` — drive/debug/verify any StrideLabs Marionette-instrumented Flutter app over the Dart VM Service |
 | [flows](plugins/flows/) | Commands | `/flows:gauntlet` and `/flows:gated-commit` for end-to-end build flows (plan → panel review → gated commits → PR) |
@@ -55,3 +55,18 @@ Cursor: install `forge` from the cc-plugins marketplace, or symlink
    slash-only (`disable-model-invocation: true`); they are not required to be
    model-invoked.
 4. Register in `.claude-plugin/marketplace.json`
+
+## Checks
+
+CI (`.github/workflows/ci.yml`) runs on every PR and push to `main`. The same
+checks locally:
+
+```bash
+python3 -m unittest discover -s plugins/codex-cli/scripts/tests -v   # codex-run.py
+claude plugin validate .                                             # marketplace + plugin manifests
+python3 .github/scripts/check_doc_snippets.py                        # every bash/sh block in the docs parses
+```
+
+Shell snippets in plugin docs are copied and run by agents, so write
+placeholders inside quotes (`REPO="<owner>/<repo>"`): an unquoted `<…>`
+parses as a redirect.

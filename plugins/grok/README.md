@@ -20,9 +20,9 @@ Check that the `grok` CLI is installed and authenticated, and report a readiness
 
 ## Model selection
 
-All commands pin **`grok-4.6`** at **`--effort high`**, stated near the top of each command/subagent file (when bumping the default, update every command file plus this README). They deliberately do NOT inherit `~/.grok/config.toml`'s default, so runs are deterministic across machines.
+All commands pin **`grok-4.7`** at **`--effort high`**, stated near the top of each command/subagent file (when bumping the default, update every command file plus this README). They deliberately do NOT inherit `~/.grok/config.toml`'s default, so runs are deterministic across machines.
 
-Override per call with `--model <id>` and `--effort low|medium|high|xhigh`. Fast mode is `--effort low` (Grok has no Cursor-style `…-fast` serving-pool sibling — do not treat a lower effort as a retry backup). `xhigh` is available on `grok-4.6` only.
+Override per call with `--model <id>` and `--effort low|medium|high|xhigh`. Fast mode is `--effort low`; `grok models` also lists a `grok-4.7-build-fast` id, but don't treat a lower effort or a different model id like that one as a retry backup. `xhigh` is verified on `grok-4.7`; other models may reject it.
 
 List ids with `grok models`.
 

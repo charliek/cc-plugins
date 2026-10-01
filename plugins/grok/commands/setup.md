@@ -37,4 +37,4 @@ Check that the Grok CLI is ready to use, then report a concise readiness summary
    - Authenticated? (from `grok models`)
    - Next steps if anything is missing (install, or `grok login`).
 
-5. **Mention model selection:** this plugin's commands pin `grok-4.6` at `--effort high` (they do NOT inherit `~/.grok/config.toml`'s default). Override per call with `--model <id>` and `--effort low|medium|high|xhigh`. Fast mode is `--effort low`. List ids with `grok models`.
+5. **Mention model selection:** this plugin's commands pin `grok-4.7` at `--effort high` (they do NOT inherit `~/.grok/config.toml`'s default). Override per call with `--model <id>` and `--effort low|medium|high|xhigh`. Fast mode is `--effort low`. List ids with `grok models`.

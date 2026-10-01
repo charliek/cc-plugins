@@ -10,7 +10,7 @@ Run a read-only code review of local git changes through `codex exec review`.
 Raw slash-command arguments:
 `$ARGUMENTS`
 
-Default model: `gpt-5.6-sol` at `model_reasoning_effort="high"` (override with `--model <id>` and/or `--effort <level>`).
+Default model: `gpt-6.1-sol` at `model_reasoning_effort="high"` (override with `--model <id>` and/or `--effort <level>`).
 
 Core constraint:
 
@@ -45,7 +45,7 @@ Run the review:
   ```bash
   tmpdir=$(mktemp -d)
   trap 'rm -rf "$tmpdir"' EXIT
-  codex exec -s read-only review --uncommitted -m gpt-5.6-sol -c model_reasoning_effort="high" \
+  codex exec -s read-only review --uncommitted -m gpt-6.1-sol -c model_reasoning_effort="high" \
     -o "$tmpdir/review.txt" >"$tmpdir/stdout.txt" 2>"$tmpdir/stderr.txt"
   status=$?
   if [ $status -ne 0 ] || [ ! -s "$tmpdir/review.txt" ]; then
@@ -61,7 +61,7 @@ Run the review:
 - `-s read-only` sits at the `exec` level (before `review` — the subcommand rejects it) and pins the sandbox regardless of project/user config.
 
 - Use `timeout: 600000` on foreground runs. For `--background`, launch this `Bash` pipeline with `run_in_background: true` and tell the user: "Codex review started in the background." Do not wait for it in this turn.
-- If the user passed `--model <id>`, use it in place of `gpt-5.6-sol`; if `--effort <level>`, use it in place of `high`.
+- If the user passed `--model <id>`, use it in place of `gpt-6.1-sol` (expand `sol`/`astra`/`luna` to `gpt-6.1-sol`/`gpt-6-astra`/`gpt-6-luna`; accept only ids matching `[A-Za-z0-9._-]+`); if `--effort <level>`, use it in place of `high` (allowlist: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, `ultra`).
 
 Present results:
 

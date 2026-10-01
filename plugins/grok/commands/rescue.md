@@ -10,7 +10,7 @@ Hand this request to the Grok CLI via headless `grok` and return its final messa
 Raw user request:
 $ARGUMENTS
 
-Default model: `grok-4.6` at `--effort high` (override with `--model <id>` and/or `--effort <level>`). List ids with `grok models`.
+Default model: `grok-4.7` at `--effort high` (override with `--model <id>` and/or `--effort <level>`). List ids with `grok models`.
 
 Build a single `grok` invocation. **Grok headless does not treat a bare `-p` pipe as the prompt** (`-p` requires a value). Feed the task through **`--prompt-file /dev/stdin`** with a quoted heredoc on that process's stdin, never as an inline quoted `-p` argument. That prevents `$(...)`, backticks, `$VAR`, quotes, and newlines in the task from being expanded by Bash.
 
@@ -28,7 +28,7 @@ trap 'rm -rf "$tmpdir"' EXIT
 grok --prompt-file /dev/stdin \
   --output-format json \
   --always-approve \
-  --model grok-4.6 \
+  --model grok-4.7 \
   --effort high \
   --no-auto-update \
   >"$tmpdir/out.json" 2>"$tmpdir/stderr.txt" <<'GROK_TASK_9f3a2b1c'
@@ -66,8 +66,8 @@ Flag handling (strip these from the task text before placing it in the heredoc b
 - `--background`: run the `Bash` call with `run_in_background: true` and tell the user the Grok task started in the background. Do not wait for it this turn.
 - `--wait` (or neither): run in the foreground with `timeout: 600000` (the maximum; Grok tasks can run several minutes).
 - `--read-only`: add `--sandbox read-only`.
-- `--model <id>`: use it in place of `grok-4.6`. Validate before use: accept only ids matching `[A-Za-z0-9._-]+`; reject anything else (it would be interpolated into shell syntax outside the quoted heredoc).
-- `--effort <level>`: use it in place of `high`. Allowlist strictly — accepted values are exactly `low`, `medium`, `high`, `xhigh`; reject anything else. Fast mode is `low`. Do not invent a `--fast` flag. `xhigh` is valid on `grok-4.6` only.
+- `--model <id>`: use it in place of `grok-4.7`. Validate before use: accept only ids matching `[A-Za-z0-9._-]+`; reject anything else (it would be interpolated into shell syntax outside the quoted heredoc).
+- `--effort <level>`: use it in place of `high`. Allowlist strictly — accepted values are exactly `low`, `medium`, `high`, `xhigh`; reject anything else. Fast mode is `low`. Do not invent a `--fast` flag. `xhigh` is verified on `grok-4.7`; other models may reject it.
 - `--resume <uuid>`: add `--resume <uuid>` (continue that exact session). Validate the UUID as `[A-Za-z0-9-]+`.
 - `--resume` with no UUID: add `-c` (newest session in this working directory). **Caveat:** `-c` races if another Grok run is in flight here — prefer `--fresh` (with the prior context restated in the task text) when parallel runs are plausible. `--resume` **can** be combined with `--read-only`: sandbox is a process flag, not inherited from the prior session.
 - `--fresh`: do not add `-c` or `--resume`. If neither `--resume` nor `--fresh` is present and the user is clearly continuing prior Grok work ("continue", "keep going", "apply the top fix", "dig deeper"), resume with `-c`; otherwise run fresh.
@@ -77,5 +77,5 @@ Output:
 - Return the extracted `text` field (Grok's final message) verbatim. Do not paraphrase, summarize, rewrite, or add commentary before or after it.
 - `GROK_SESSION_ID=…` on stderr is for the next `--resume <uuid>`; do not treat it as part of the answer.
 - By default the run is write-capable (`--always-approve`), so Grok may edit files and run commands. Changes land in the current git repo and are reviewable via `git diff`.
-- On failure, do **not** fabricate a substitute answer, and never present an empty result as "no findings". Do **not** retry with `--effort low` — that is a weaker pass, not a serving-pool backup. Report the failure concisely (most actionable stderr lines); if `grok` looks missing or unauthenticated, direct the user to `/grok:setup`.
+- On failure, do **not** fabricate a substitute answer, and never present an empty result as "no findings". Do **not** retry with `--effort low` or a different model id such as `grok-4.7-build-fast` — neither is a serving-pool backup. Report the failure concisely (most actionable stderr lines); if `grok` looks missing or unauthenticated, direct the user to `/grok:setup`.
 - If the user did not supply a request, ask what Grok should investigate or fix before running.

@@ -7,7 +7,7 @@ argument-hint: "[plan-file-path]"
 
 Run Codex, GLM 5.3, and CodeRabbit plan reviews in parallel, synthesize their feedback, and incorporate improvements. Three different AI reviewers provide broad coverage and high confidence in findings they agree on.
 
-- **Codex** (OpenAI) — reviews via `codex exec` (`gpt-5.6-sol` at high reasoning effort), explores the repo read-only via `-s read-only`
+- **Codex** (OpenAI) — reviews via the `codex-cli` plugin's supervised runner on `gpt-6-astra` (high effort, read-only, 25-minute cap with a progress check every 10 minutes)
 - **GLM 5.3** (Z.ai) — reviews via `opencode run`, proactively explores the repo
 - **CodeRabbit** — reviews via `coderabbit:code-reviewer` agent, reads repo files directly
 
@@ -41,54 +41,37 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
 
    Read the plan file content so it can be included in agent prompts.
 
-   **Launch all reviewers concurrently** using a single message with multiple Agent tool calls, each with `run_in_background: true`. If a CLI tool was unavailable (detected in step 1), skip that agent.
+   **Launch all reviewers concurrently** in a single message, each with `run_in_background: true`: the Codex and GLM seats as their own `Bash` calls, CodeRabbit as an `Agent` call. If a CLI tool was unavailable (detected in step 1), skip that seat.
 
-   **Do NOT combine multiple reviewers into a single Agent or Bash call.** Each reviewer must be its own separate Agent tool call. Combining CLI tools into one shell command causes bash operator precedence bugs that silently break variable scoping.
+   **Do NOT combine multiple reviewers into a single Agent or Bash call.** Combining CLI tools into one shell command causes bash operator precedence bugs that silently break variable scoping.
 
-   **Codex reviewer** (if codex CLI is available):
-   Use the Agent tool with `subagent_type: "general-purpose"` and `run_in_background: true`.
-   Prompt the agent to run the Codex review and return only the review text:
+   **Shared brief.** First write the review brief once with the file-writing tool, next to the plan (`<plan dir>/panel-brief.md`, outside the repo); the Codex and GLM seats both read it, then the plan file itself, so nothing in the plan is ever expanded by the shell:
 
-   > You are a plan reviewer. Run the following Bash command to get a Codex review of an implementation plan, then return ONLY the review text (no commentary or wrapper).
-   >
-   > Run as a single Bash command:
-   > ```bash
-   > tmpdir=$(mktemp -d)
-   > trap 'rm -rf "$tmpdir"' EXIT
-   > codex exec -m gpt-5.6-sol -c model_reasoning_effort="high" -s read-only -o "$tmpdir/codex.txt" \
-   >   "Review the following implementation plan. Evaluate standalone readability, acceptance criteria, test coverage, and repo pattern alignment. Provide specific, actionable feedback organized by category.
-   >
-   >   ---BEGIN PLAN---
-   >   <paste full plan text here>
-   >   ---END PLAN---" \
-   >   2>"$tmpdir/stderr.txt"
-   > if [ $? -ne 0 ] || [ ! -s "$tmpdir/codex.txt" ]; then
-   >   cat "$tmpdir/stderr.txt"
-   >   exit 1
-   > fi
-   > cat "$tmpdir/codex.txt"
-   > ```
+   > Review the implementation plan that follows this brief. You may read repository files for context; do not edit anything. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? 5) Risks, gaps, or missing edge cases? Provide specific, actionable feedback organized by category, citing file:line where the repo contradicts the plan.
 
-   **GLM reviewer** (if opencode CLI is available):
-   Use the Agent tool with `subagent_type: "general-purpose"` and `run_in_background: true`.
-   Prompt the agent to run the GLM review and return only the review text:
+   Every seat command below is plain — no variables, `$(…)`, `||` guards, or heredocs, which a session pinned to a worktree refuses as too complex to verify. Use resolved absolute paths in single quotes (`~` does not expand inside quotes; write an embedded `'` as `'\''`).
 
-   > You are a plan reviewer. Run the following Bash command to get a GLM 5.3 review of an implementation plan, then return ONLY the review text (no commentary or wrapper).
-   >
-   > Run as a single Bash command:
-   > ```bash
-   > tmpdir=$(mktemp -d)
-   > trap 'rm -rf "$tmpdir"' EXIT
-   > cat "<plan-file-path>" | opencode run \
-   >   -m "zai-coding-plan/glm-5.3" \
-   >   -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone? 2) Are acceptance criteria clear? 3) Does it include test coverage? 4) Does it match repo conventions? Provide specific, actionable feedback." \
-   >   > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"
-   > if [ $? -ne 0 ] || [ ! -s "$tmpdir/output.txt" ]; then
-   >   cat "$tmpdir/stderr.txt"
-   >   exit 1
-   > fi
-   > cat "$tmpdir/output.txt"
-   > ```
+   **Codex reviewer** (if codex CLI is available): run it yourself as a background `Bash` call — not inside an Agent. Astra on a whole plan can take well over 10 minutes, and a subagent's single foreground shell call is capped at 10; the runner (`scripts/codex-run.py` in the `codex-cli` plugin) supervises it instead: 25-minute cap, killed early if its output has been flat for 10 minutes, and a distinct exit code for every way it can fail. Locate it first — `printenv CODEX_RUN` (a checkout's copy, for changes not installed yet), else:
+
+   ```bash
+   find ~/.claude/plugins ~/.cursor/plugins ~/.grok/installed-plugins ~/.grok/plugins -path '*codex-cli*/scripts/codex-run.py' 2>/dev/null | xargs -r ls -t 2>/dev/null | head -n1
+   ```
+
+   Nothing printed means the codex-cli plugin isn't installed: skip the seat and say so. Otherwise, with that path:
+
+   ```bash
+   uv run --script '<runner path>' --model astra --prompt-file '<brief path>' --prompt-file '<plan path>'
+   ```
+
+   A non-zero exit is a failed seat — report the runner's reason, never "no findings". If it stalls on a big plan, one retry on an excerpt (design and work-breakdown sections, in their own file) beats a longer cap.
+
+   **GLM reviewer** (if opencode CLI is available): also a background `Bash` call from you, not an Agent — whole-plan GLM reviews outlast a subagent's 10-minute shell call. The inline policy makes the seat read-only for real: opencode's default agent allows every tool, so a "reviewer" could otherwise edit the repo or run shell commands. Shell, edit, subagents (`task`), and web fetch are denied, and anything outside the repo is denied rather than asked about — in a non-interactive run an "ask" kills the run, while a denied tool is simply not offered to GLM. Always use `--` before the message.
+
+   ```bash
+   cat -- '<brief path>' '<plan path>' | OPENCODE_CONFIG_CONTENT='{"permission":{"bash":"deny","edit":"deny","task":"deny","webfetch":"deny","external_directory":"deny"}}' opencode run -m zai-coding-plan/glm-5.3 -- 'Follow the review brief on stdin; the full plan follows it.'
+   ```
+
+   Stop it with the task-stop tool if it is still running at 20 minutes. A stopped run, a non-zero exit, or empty output is a failed seat.
 
    **CodeRabbit reviewer**:
    Use the Agent tool with `subagent_type: "coderabbit:code-reviewer"` and `run_in_background: true`.
@@ -100,13 +83,13 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    5. Are there any risks, gaps, or missing edge cases?
    Ask the agent to read relevant repo files to ground its review.
 
-   Wait for all agents to complete.
+   Wait for all seats to complete (you are notified as each background call or agent finishes).
 
 5. **Collect results**: Read each agent's returned result. If any agent reported an error or was skipped, proceed with the others' findings.
 
 6. **Synthesize feedback**: Compile a unified list of all findings from all reviewers. Every finding should be evaluated on its own merit regardless of which reviewer raised it.
    - **Prioritization**: Findings flagged by multiple reviewers are likely higher priority, but a finding from a single reviewer is still valid and should be evaluated
-   - **Reviewer strength**: Codex tends to be the strongest reviewer. Give its unique findings strong consideration. GLM and CodeRabbit may catch things Codex misses but weigh their findings accordingly.
+   - **Reviewer strength**: Codex (astra) tends to be the strongest reviewer. Give its unique findings strong consideration. GLM and CodeRabbit may catch things Codex misses but weigh their findings accordingly.
    - **Contradictions**: When reviewers disagree on the same topic, flag for user review rather than acting autonomously
    - Do not discard findings just because only one reviewer raised them
 

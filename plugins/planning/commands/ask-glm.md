@@ -30,26 +30,21 @@ Use `$ARGUMENTS` as an optional path to the plan file. If not provided, use the 
    - [ ] **No conversation dependencies**: Fully understandable without prior chat context
    - [ ] **Repo conventions**: Matches the repo's existing patterns (naming, structure, tooling)
 
-4. **Submit the plan to GLM for review**: Pipe the plan content to opencode with a review prompt.
+4. **Submit the plan to GLM for review**: pipe a brief and the plan to opencode. Use plain commands — no variables, `$(…)`, or heredocs, which a session pinned to a worktree refuses.
 
-   Run the following as a **single Bash command** (the temp directory variable must remain in scope):
+   1. **Write the review brief** with the file-writing tool, next to the plan (`<plan dir>/glm-brief.md`, outside the repo):
 
-   ```bash
-   tmpdir=$(mktemp -d) && \
-   echo "TMPDIR=$tmpdir" && \
-   cat "<plan-file-path>" | opencode run \
-     -m "zai-coding-plan/glm-5.3" \
-     -- "Review the following implementation plan. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? Provide specific, actionable feedback organized by category." \
-     > "$tmpdir/output.txt" 2>"$tmpdir/stderr.txt"
-   ```
+      > Review the implementation plan that follows this brief. You may read repository files for context; do not edit anything. Evaluate: 1) Is the plan standalone and understandable without conversation context? 2) Are acceptance criteria clear and actionable? 3) Does it include test coverage requirements? 4) Does it match the repo's architectural patterns and conventions? 5) Risks, gaps, or missing edge cases? Provide specific, actionable feedback organized by category, citing file:line where the repo contradicts the plan.
 
-   **Important:** Always use `--` before the message to prevent it from being interpreted as file paths. Pipe the plan via stdin rather than using `-f` for files outside the repo (opencode may reject external directory permissions).
+   2. **Run it in the background** (`run_in_background: true`) — a whole-plan review can outlast one 10-minute foreground call. Use resolved absolute paths in single quotes (`~` does not expand inside quotes; write an embedded `'` as `'\''`).
 
-   **Note the temp directory path** from the `TMPDIR=...` output line — use it when reading output files and during cleanup.
+      ```bash
+      cat -- '<brief path>' '<plan path>' | OPENCODE_CONFIG_CONTENT='{"permission":{"bash":"deny","edit":"deny","task":"deny","webfetch":"deny","external_directory":"deny"}}' opencode run -m zai-coding-plan/glm-5.3 -- 'Follow the review brief on stdin; the full plan follows it.'
+      ```
 
-   Check the exit code. If non-zero, read `$tmpdir/stderr.txt` for error details and stop. Otherwise read `$tmpdir/output.txt` for the review.
+   **Why the policy:** The inline policy makes the seat read-only for real: opencode's default agent allows every tool, so a "reviewer" could otherwise edit the repo or run shell commands. Shell, edit, subagents (`task`), and web fetch are denied, and anything outside the repo is denied rather than asked about — in a non-interactive run an "ask" kills the run, while a denied tool is simply not offered to GLM. **Always use `--`** before the message so it is not taken as file paths, and pipe the plan on stdin rather than `-f` (opencode may reject external directory permissions).
 
-   **Note:** GLM via opencode will proactively explore the repository to understand existing patterns and conventions before providing feedback.
+   Stop it with the task-stop tool if it is still running at 20 minutes. A stopped run, a non-zero exit, or empty output is a failed review — report it, never as "no findings".
 
 5. **Evaluate findings**: Analyze each piece of feedback from GLM
    - **Fix**: missing acceptance criteria, unclear exit conditions, incomplete test coverage, architectural misalignment, standalone readability issues, missing edge cases
