@@ -77,6 +77,12 @@
       "description": "Convention-based GitHub issue workflows: file well-formed single issues, run cross-repo epics on a shared Projects v2 board, and keep labels and titles consistent across every repo",
       "source": "./plugins/issue-workflows",
       "category": "development"
+    },
+    {
+      "name": "nocturn",
+      "description": "Maintain a repository's own Nocturn contract: write and update .nocturn.yaml, onboard a repo, and keep each stack (Rust, Go, Python, JavaScript, Flutter/Android) conforming to the fleet's standards",
+      "source": "./plugins/nocturn",
+      "category": "development"
     }
   ]
 }
