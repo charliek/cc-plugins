@@ -62,7 +62,7 @@ Rules:
   Go has no lockfile entry; `go.sum` is not a path.
 - Clean, slash-separated, relative to the repo root: no leading `/`, no `..`,
   no `./`, no backslash.
-- Each path must exist as a lockfile in the repo (`check` fails otherwise).
+- Each path must exist in the repo as one of those files (`check` fails otherwise).
 - Several targets may ship the same lockfile.
 - A path in `ships` can't also be in `lockfiles` (invalid).
 

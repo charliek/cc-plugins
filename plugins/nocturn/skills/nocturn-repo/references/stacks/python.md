@@ -23,7 +23,8 @@ baseline is in `baseline.yaml` and moves (at the time of writing: 3.13).
 - `libraries-direct`: direct dependencies not a major behind latest.
   `stridelabs-python` (`pkg:pypi/stridelabs-*`) is an internal library: warn
   when a tag behind.
-- Lock with `uv lock`; don't edit lockfiles by hand.
+- Lock with `uv lock`, or `poetry lock` for a `poetry.lock`; don't edit lockfiles
+  by hand.
 - Shared: `gate-command`, `ci-on-pull-requests`, `agent-instructions`.
 
 ## File mapping

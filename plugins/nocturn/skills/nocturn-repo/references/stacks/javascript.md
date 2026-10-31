@@ -18,15 +18,16 @@ baseline is in `baseline.yaml` and moves (at the time of writing: bun 1.4).
 
 - `toolchain-pinned` (warn): a `bun` ecosystem needs a concrete bun pin and an
   `npm` ecosystem a concrete node pin, usually in `.mise.toml`.
-- Rule `other-runtimes` covers node and bun: critical at EOL, warn when a
-  minor behind the baseline or inconsistent, info when unpinned. Bun's
-  baseline is in `baseline.yaml`; node has no baseline entry.
+- Rule `other-runtimes` covers node and bun: critical at EOL, warn when
+  inconsistent, info when unpinned. Bun also warns when a minor behind the
+  baseline in `baseline.yaml`; node has no baseline entry.
 - `dependabot-config`: `bun` or `npm` at each `package.json` directory,
   `github-actions` at `/`, `docker` per Dockerfile directory, weekly, grouped.
 - `libraries-direct`: direct dependencies not a major behind latest. Dev
   dependencies in a shipping lockfile score as not shipping (scope), so keep
   `devDependencies` correct.
-- Install with the frozen lockfile in CI (`bun install --frozen-lockfile`).
+- Install with the frozen lockfile in CI (`bun install --frozen-lockfile`,
+  `npm ci`).
 - Shared: `gate-command`, `ci-on-pull-requests`, `agent-instructions`.
 
 ## File mapping
