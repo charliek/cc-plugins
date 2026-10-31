@@ -1,0 +1,7 @@
+{
+  "name": "nocturn",
+  "description": "Maintain a repository's own Nocturn contract: write and update .nocturn.yaml (what the repo ships and what its other lockfiles are for), onboard a repo, and keep each stack (Rust, Go, Python, JavaScript, Flutter/Android) conforming to the fleet's standards",
+  "author": {
+    "name": "charliek"
+  }
+}
