@@ -36,7 +36,7 @@ still exists and is separate.
      If the repo can't have that, tell the owner: the project's gate is set
      centrally in `projects.yaml`.
    - `dependabot-config`: `.github/dependabot.yml` covers `github-actions`
-     plus every package ecosystem in the repo, each weekly and grouped.
+     plus each package ecosystem its stack file requires, weekly and grouped.
    - `ci-on-pull-requests`: a workflow runs on `pull_request`.
    - `agent-instructions`: `CLAUDE.md` or `AGENTS.md` says how to build and test.
    - `toolchain-pinned`: each language has an exact pin.

@@ -40,7 +40,7 @@ nocturn repo check [dir] --json     # validates the file; exit 0 valid, 1 not va
   deploy files, toolchain pins, Android apps' target SDK, ecosystems, the
   current file's state, and warnings.
 - `check` fails (exit 1) when there is no file, it doesn't parse, a named path
-  isn't a lockfile in the repo, a lockfile is unmapped, or a `retiring` date
+  isn't a lockfile or `go.mod` in the repo, a lockfile is unmapped, or a `retiring` date
   has passed. It also lists five conventions (`gate-command`,
   `dependabot-config`, `ci-on-pull-requests`, `agent-instructions`,
   `toolchain-pinned`). Those never change the exit code, but fix the failing

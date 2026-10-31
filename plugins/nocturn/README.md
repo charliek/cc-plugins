@@ -23,6 +23,6 @@ the code disagree.
 
 References:
 
-- `references/file-format.md`: every option in `.nocturn.yaml`.
-- `references/onboarding.md`: the onboarding steps and when to change the file.
-- `references/stacks/{rust,go,python,javascript,flutter-android}.md`: what each stack must conform to.
+- `skills/nocturn-repo/references/file-format.md`: every option in `.nocturn.yaml`.
+- `skills/nocturn-repo/references/onboarding.md`: the onboarding steps and when to change the file.
+- `skills/nocturn-repo/references/stacks/{rust,go,python,javascript,flutter-android}.md`: what each stack must conform to.
