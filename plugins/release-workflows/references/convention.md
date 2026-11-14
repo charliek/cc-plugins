@@ -86,7 +86,10 @@ Why two commits not one:
   manifest" assertion compares against the right tree
 
 If a future repo needs the combined-commit shape, override in that repo's
-`RELEASING.md`. The skill respects it.
+`RELEASING.md`. The skill respects it: it reads `RELEASING.md` first
+(release step 0) and follows any override there, such as the
+previous-tag command or the changelog's scope in a repo with more than
+one release stream.
 
 ## Snapshot / dev-version bumping
 
