@@ -31,6 +31,25 @@ If any check fails, stop. Don't paper over.
 
 ## Steps
 
+### 0. Read the repo's RELEASING.md for overrides
+
+```bash
+if [ -e RELEASING.md ]; then cat RELEASING.md; else echo "no RELEASING.md"; fi
+```
+
+If the file exists but `cat` fails (unreadable), stop: releasing on the defaults
+would ignore the repo's overrides.
+
+The convention lets a repo override this skill in its root `RELEASING.md`
+(see [`references/convention.md`](../references/convention.md)). Read it
+before step 1 and note anything that changes a step below: the
+previous-tag command, which paths or commits the changelog covers, which
+CHANGELOG section the entry replaces, the heading style, the CI check,
+the commit shape, or how the push lands. Where RELEASING.md and this
+skill disagree, RELEASING.md wins; say which override you are following
+when you reach that step. A repo with no RELEASING.md uses the steps as
+written.
+
 ### 1. Verify branch is `main`
 
 ```bash
@@ -102,11 +121,18 @@ multiple manifests — the missing-lockfile bump is the bug we're avoiding.
 
 ### 6. Generate the CHANGELOG entry
 
-Find the previous release tag:
+Find the previous release tag (unless RELEASING.md gives its own
+command, step 0):
 
 ```bash
-git describe --tags --abbrev=0 --match "v*" 2>/dev/null
+git describe --tags --abbrev=0 --match "v[0-9]*.[0-9]*.[0-9]*" --exclude "v2[0-9][0-9][0-9].*" 2>/dev/null
 ```
+
+The `--exclude` skips the date tags (`vYYYY.MM.DD[.N]`) that
+`/deploy:build` creates, so a repo with both a semver stream and a
+date-tagged deploy stream drafts this changelog from the previous semver
+release, not from the newest deploy. A repo with only semver tags sees
+no change.
 
 Collect commits since that tag:
 

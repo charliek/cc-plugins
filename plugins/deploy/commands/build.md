@@ -38,7 +38,10 @@ post-step check listed below, then move on.
    - Show the proposed tag to the user for confirmation
 
 5. **Generate changelog entry**: Summarize changes since last release
-   - Find the previous release tag: `git describe --tags --abbrev=0 --match "v*" 2>/dev/null`
+   - Find the previous release tag: `git describe --tags --abbrev=0 --match "v2[0-9][0-9][0-9].*" 2>/dev/null`
+     - The pattern matches only the date tags step 4 creates. A repo that also cuts semver
+       tags (`vX.Y.Z`, e.g. from `/release-workflows:release`) would otherwise draft this
+       changelog from the newest semver tag.
    - Get commits since that tag: `git log <previous-tag>..HEAD --oneline`
    - If no previous tag exists, get all commits: `git log --oneline`
    - Write a concise summary of the changes (group by type: features, fixes, updates)
