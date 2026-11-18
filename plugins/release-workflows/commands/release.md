@@ -34,8 +34,11 @@ If any check fails, stop. Don't paper over.
 ### 0. Read the repo's RELEASING.md for overrides
 
 ```bash
-cat RELEASING.md 2>/dev/null || echo "no RELEASING.md"
+if [ -e RELEASING.md ]; then cat RELEASING.md; else echo "no RELEASING.md"; fi
 ```
+
+If the file exists but `cat` fails (unreadable), stop: releasing on the defaults
+would ignore the repo's overrides.
 
 The convention lets a repo override this skill in its root `RELEASING.md`
 (see [`references/convention.md`](../references/convention.md)). Read it
@@ -122,7 +125,7 @@ Find the previous release tag (unless RELEASING.md gives its own
 command, step 0):
 
 ```bash
-git describe --tags --abbrev=0 --match "v[0-9]*" --exclude "v2[0-9][0-9][0-9].*" 2>/dev/null
+git describe --tags --abbrev=0 --match "v[0-9]*.[0-9]*.[0-9]*" --exclude "v2[0-9][0-9][0-9].*" 2>/dev/null
 ```
 
 The `--exclude` skips the date tags (`vYYYY.MM.DD[.N]`) that
